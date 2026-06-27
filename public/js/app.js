@@ -28,7 +28,12 @@ async function api(path, { method = 'GET', body, isForm = false } = {}) {
   });
 
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
+  if (!res.ok) {
+    const err = new Error(data.error || `Request failed (${res.status})`);
+    err.status = res.status;
+    err.raw = data.raw; // e.g. the model's unparseable output, for debugging
+    throw err;
+  }
   return data;
 }
 
@@ -554,7 +559,8 @@ async function handleChatImage(event) {
     displayChatAnalysis(result, mlResults);
   } catch (err) {
     document.getElementById('analyzingMsg')?.remove();
-    addMessage('assistant', 'Sorry, I could not analyze the photo. Please try again.');
+    const detail = err.raw ? `<div style="font-size:.75rem;opacity:.6;margin-top:.5rem;white-space:pre-wrap;">Model said: ${err.raw.substring(0, 200)}…</div>` : '';
+    addMessage('assistant', `${err.message || 'Sorry, I could not analyze the photo. Please try again.'}${detail}`);
   }
 }
 
@@ -699,7 +705,8 @@ async function handleImage(event) {
       });
       displayStandaloneAnalysis(result, imgSrc, mlResults);
     } catch (err) {
-      content.innerHTML = `<img src="${imgSrc}" class="preview-img"><p style="text-align:center;color:var(--clay);padding:2rem;">Analysis failed. Please try again.</p><button class="btn btn-primary btn-full" onclick="retakePhoto()">Try Again</button>`;
+      const detail = err.raw ? `<div style="font-size:.75rem;opacity:.6;margin-top:.5rem;white-space:pre-wrap;">Model said: ${err.raw.substring(0, 200)}…</div>` : '';
+      content.innerHTML = `<img src="${imgSrc}" class="preview-img"><div style="text-align:center;color:var(--clay);padding:2rem;">${err.message || 'Analysis failed. Please try again.'}${detail}</div><button class="btn btn-primary btn-full" onclick="retakePhoto()">Try Again</button>`;
     }
   };
   reader.readAsDataURL(file);

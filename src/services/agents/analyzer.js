@@ -8,27 +8,24 @@ const llm = require('../llm');
  * original PureGlow app parsed.
  */
 
-const ANALYSIS_PROMPT = `You are a professional dermatology analysis assistant. Analyze the provided skin photo and respond in this EXACT format (no extra prose):
+const ANALYSIS_PROMPT = `You are a professional dermatology analysis assistant. Look carefully at the provided skin photo and rate what you actually see.
 
-BODY_PART: [face/hand/foot/arm/leg/back/etc]
-SKIN_TYPE: [dry/normal/oily/combination]
+Reply with ONLY the lines below. Replace every <int> with a real whole number 0-10 based on the photo (0 = none, 10 = severe). Do NOT use markdown, asterisks, brackets, or any extra prose. Do NOT echo the words "0-10" or leave any placeholder.
 
-METRICS (rate each 0-10, where 0=none, 10=severe):
-DRYNESS: [0-10]
-DEHYDRATION: [0-10]
-WRINKLES: [0-10]
-SAGGING: [0-10]
-SENSITIVITY: [0-10]
-REDNESS: [0-10]
-BLOCKED_PORES: [0-10]
-ENLARGED_PORES: [0-10]
-ACNE: [0-10]
-PIGMENTATION: [0-10]
-
-TOP_CONCERNS: [the 3 highest-scoring concerns]
-RECOMMENDATION: [1-2 sentence professional, non-diagnostic advice]
-
-Be precise and base scores on visible skin conditions only.`;
+BODY_PART: <one of face/hand/foot/arm/leg/back>
+SKIN_TYPE: <one of dry/normal/oily/combination>
+DRYNESS: <int>
+DEHYDRATION: <int>
+WRINKLES: <int>
+SAGGING: <int>
+SENSITIVITY: <int>
+REDNESS: <int>
+BLOCKED_PORES: <int>
+ENLARGED_PORES: <int>
+ACNE: <int>
+PIGMENTATION: <int>
+TOP_CONCERNS: <the 3 highest-scoring concerns, comma separated>
+RECOMMENDATION: <1-2 sentence professional, non-diagnostic advice>`;
 
 /**
  * @param {string} imageDataUrl - data:image/...;base64,... URI
@@ -37,7 +34,10 @@ Be precise and base scores on visible skin conditions only.`;
 async function analyze(imageDataUrl, extraInstruction = '') {
   const text = extraInstruction ? `${ANALYSIS_PROMPT}\n\n${extraInstruction}` : ANALYSIS_PROMPT;
   const messages = [llm.userMessage(text, imageDataUrl)];
-  return llm.chatCompletion(messages, { temperature: 0.2, maxTokens: 512 });
+  const raw = await llm.chatCompletion(messages, { temperature: 0.2, maxTokens: 512 });
+  // Log the raw model output so vision/format issues are diagnosable from server logs.
+  console.log('🔬 analyzer raw output:\n' + (raw || '(empty)').slice(0, 800));
+  return raw;
 }
 
 /**
@@ -48,7 +48,27 @@ async function reEvaluate(imageDataUrl, originalAnalysis, userFeedback) {
   return analyze(imageDataUrl, instruction);
 }
 
-/** Parse the structured agent output into a metrics object. */
+const METRIC_DEFS = [
+  ['dryness', 'DRYNESS'],
+  ['dehydration', 'DEHYDRATION'],
+  ['wrinkles', 'WRINKLES?'],
+  ['sagging', 'SAGGING'],
+  ['sensitivity', 'SENSITIVITY'],
+  ['redness', 'REDNESS'],
+  ['blockedPores', 'BLOCKED[ _]?PORES'],
+  ['enlargedPores', 'ENLARGED[ _]?PORES'],
+  ['acne', 'ACNE'],
+  ['pigmentation', 'PIGMENTATION'],
+];
+
+/**
+ * Parse the structured agent output into a metrics object.
+ *
+ * Robust to common model quirks:
+ *   - Markdown emphasis: "**DRYNESS:** 6", "- DRYNESS: 6"
+ *   - Score suffixes: "6/10", "6 out of 10"
+ *   - Echoed placeholders: "DRYNESS: [0-10]" (treated as "no score", not 0)
+ */
 function parse(text) {
   const metrics = {};
   let bodyPart = 'skin';
@@ -57,32 +77,35 @@ function parse(text) {
   let recommendation = '';
 
   const clamp = (v) => Math.max(0, Math.min(10, v));
-  const num = (line) => {
-    const m = (line.split(':')[1] || '').match(/(\d+\.?\d*)/);
-    return m ? clamp(parseFloat(m[1])) : 0;
-  };
 
-  for (const raw of text.split('\n')) {
-    const line = raw.trim();
-    const U = line.toUpperCase();
-    if (U.startsWith('BODY_PART:') || U.startsWith('BODYPART:')) bodyPart = line.split(':')[1]?.trim() || bodyPart;
-    else if (U.startsWith('SKIN_TYPE:') || U.startsWith('SKINTYPE:')) skinType = line.split(':')[1]?.trim() || skinType;
-    else if (U.startsWith('DRYNESS:')) metrics.dryness = num(line);
-    else if (U.startsWith('DEHYDRATION:')) metrics.dehydration = num(line);
-    else if (U.startsWith('WRINKLE')) metrics.wrinkles = num(line);
-    else if (U.startsWith('SAGGING:')) metrics.sagging = num(line);
-    else if (U.startsWith('SENSITIV')) metrics.sensitivity = num(line);
-    else if (U.startsWith('REDNESS:')) metrics.redness = num(line);
-    else if (U.startsWith('BLOCKED_PORES:') || U.startsWith('BLOCKEDPORES:')) metrics.blockedPores = num(line);
-    else if (U.startsWith('ENLARGED_PORES:') || U.startsWith('ENLARGEDPORES:')) metrics.enlargedPores = num(line);
-    else if (U.startsWith('ACNE:')) metrics.acne = num(line);
-    else if (U.startsWith('PIGMENTATION:')) metrics.pigmentation = num(line);
-    else if (U.startsWith('TOP_CONCERNS:') || U.startsWith('TOPCONCERNS:')) topConcerns = line.split(':')[1]?.trim() || '';
-    else if (U.startsWith('RECOMMENDATION:')) recommendation = line.split(':')[1]?.trim() || '';
+  // Strip markdown + remove unfilled "[0-10]" / "0-10" placeholders so an
+  // echoed template parses as "missing", not as a real 0.
+  const clean = String(text || '')
+    .replace(/\*\*/g, '')
+    .replace(/[*_`#>]/g, '')
+    .replace(/\[?\s*0\s*[-–—]\s*10\s*\]?/g, ' '); // drop the [0-10] scale hint
+
+  let matchedCount = 0;
+  for (const [key, pat] of METRIC_DEFS) {
+    // LABEL [: = -] <number>, tolerating markdown/spacing already stripped.
+    const re = new RegExp(`${pat}\\s*[:=\\-]*\\s*(\\d+(?:\\.\\d+)?)`, 'i');
+    const m = clean.match(re);
+    if (m) {
+      metrics[key] = clamp(parseFloat(m[1]));
+      matchedCount += 1;
+    } else {
+      metrics[key] = 0;
+    }
   }
 
-  const required = ['dryness', 'dehydration', 'wrinkles', 'sagging', 'sensitivity', 'redness', 'blockedPores', 'enlargedPores', 'acne', 'pigmentation'];
-  for (const k of required) if (metrics[k] === undefined || Number.isNaN(metrics[k])) metrics[k] = 0;
+  const grab = (label) => {
+    const m = clean.match(new RegExp(`${label}\\s*[:=]\\s*([^\\n]+)`, 'i'));
+    return m ? m[1].trim() : '';
+  };
+  bodyPart = (grab('BODY[ _]?PART').split('/')[0] || bodyPart).trim() || bodyPart;
+  skinType = (grab('SKIN[ _]?TYPE').split('/')[0] || skinType).trim() || skinType;
+  topConcerns = grab('TOP[ _]?CONCERNS');
+  recommendation = grab('RECOMMENDATION');
 
   // Derive top concerns from the highest metrics if the model omitted/mismatched them.
   const pairs = Object.entries(metrics).sort((a, b) => b[1] - a[1]);
@@ -93,7 +116,11 @@ function parse(text) {
     .join(', ');
   if (!topConcerns || pairs[0][1] === 0) topConcerns = computed || 'No significant concerns detected';
 
-  return { bodyPart, skinType, metrics, topConcerns, recommendation, raw: text };
+  // The result is "empty" if the model gave us no usable scores — this lets the
+  // route surface a real error instead of a misleading all-zero chart.
+  const isEmpty = matchedCount === 0;
+
+  return { bodyPart, skinType, metrics, topConcerns, recommendation, isEmpty, matchedCount, raw: text };
 }
 
 module.exports = { analyze, reEvaluate, parse, ANALYSIS_PROMPT };

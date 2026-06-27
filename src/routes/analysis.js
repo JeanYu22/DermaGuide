@@ -44,6 +44,18 @@ router.post(
     const raw = await analyzer.analyze(dataUrl);
     const parsed = analyzer.parse(raw);
 
+    // The model returned text we couldn't turn into scores. Surface a real
+    // error (with the raw output) instead of a misleading all-zero chart —
+    // this usually means the vision projector (--mmproj) isn't loaded or the
+    // model ignored the format.
+    if (parsed.isEmpty) {
+      return res.status(422).json({
+        error:
+          "The AI returned an analysis we couldn't read as scores. If this keeps happening, make sure llama.cpp was started with the multimodal projector (--mmproj) so it can see the photo.",
+        raw: raw.slice(0, 600),
+      });
+    }
+
     // Peer review (best-effort).
     let reviewerVerdict = 'PASS';
     try {
