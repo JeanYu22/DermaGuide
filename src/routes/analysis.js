@@ -43,10 +43,24 @@ router.post(
     if (!req.file) return res.status(400).json({ error: 'An image file is required' });
 
     const dataUrl = toDataUrl(req.file);
+
+    // Gate 1: a focused subject classifier (human / animal / other) runs first,
+    // because the small grader otherwise rates animal skin as human.
+    const subject = await analyzer.classifySubject(dataUrl);
+    if (!subject.isHuman) {
+      return res.status(422).json({
+        code: 'not_human_skin',
+        error:
+          subject.verdict === 'animal'
+            ? 'This looks like an animal, not human skin. Please upload a photo of human skin (face, hand, arm, etc.).'
+            : "That photo doesn't look like human skin. Please upload a clear photo of your face, hand, arm, or other skin area.",
+      });
+    }
+
     const raw = await analyzer.analyze(dataUrl);
     const parsed = analyzer.parse(raw);
 
-    // Human-skin gate: the model decides if the photo is human skin at all.
+    // Gate 2: the analyzer's own IS_HUMAN_SKIN line, as a backup.
     if (!parsed.isSkin) {
       return res.status(422).json({
         code: 'not_human_skin',

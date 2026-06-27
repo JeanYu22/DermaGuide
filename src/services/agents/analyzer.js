@@ -38,6 +38,39 @@ PIGMENTATION: <int>
 TOP_CONCERNS: <the 3 highest-scoring concerns, comma separated>
 RECOMMENDATION: <1-2 sentence professional, non-diagnostic advice>`;
 
+// Focused subject classifier. A weak grader buries the human/animal decision
+// when it's also asked to score 10 metrics, so we ask ONLY this question first.
+const SUBJECT_PROMPT = `Look carefully at this image and decide what it shows. Reply with EXACTLY one line, nothing else:
+VERDICT: human
+VERDICT: animal
+VERDICT: other
+
+Use these rules:
+- "human" ONLY if it is clearly a real human person's skin, face, or body part.
+- "animal" if it is any non-human animal (monkey, ape, dog, cat, rodent, etc.). Look hard for fur, paw pads, claws, snouts, or animal anatomy — primate/monkey skin looks similar to human skin, so check for fur and paws.
+- "other" if it is not skin at all (object, plant, food, screenshot, drawing, landscape).`;
+
+/**
+ * Classify the photo's subject BEFORE scoring. Returns { verdict, isHuman }.
+ * Defaults to human only when genuinely ambiguous, to avoid rejecting real
+ * human photos.
+ */
+async function classifySubject(imageDataUrl) {
+  const data = await llm.rawCompletion([llm.userMessage(SUBJECT_PROMPT, imageDataUrl)], {
+    temperature: 0,
+    maxTokens: 24,
+  });
+  const text = llm.messageText(data).toLowerCase();
+  const m = text.match(/verdict\s*[:=]\s*(human|animal|other)/);
+  let verdict;
+  if (m) verdict = m[1];
+  else if (/(animal|monkey|ape|primate|dog|cat|paw|fur|claw|snout)/.test(text)) verdict = 'animal';
+  else if (/(object|plant|food|screenshot|drawing|landscape|not skin)/.test(text)) verdict = 'other';
+  else verdict = 'human';
+  console.log('🔬 subject classifier:', verdict, '|', text.slice(0, 120));
+  return { verdict, isHuman: verdict === 'human', raw: text };
+}
+
 /**
  * @param {string} imageDataUrl - data:image/...;base64,... URI
  * @param {string} [extraInstruction] - optional feedback for re-evaluation
@@ -155,4 +188,4 @@ function computeTopConcerns(metrics) {
     .join(', ');
 }
 
-module.exports = { analyze, reEvaluate, parse, computeTopConcerns, ANALYSIS_PROMPT };
+module.exports = { analyze, classifySubject, reEvaluate, parse, computeTopConcerns, ANALYSIS_PROMPT };
