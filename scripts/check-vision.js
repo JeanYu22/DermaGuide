@@ -25,7 +25,8 @@ function finish(data) {
   const file = process.argv[2];
   if (!file) {
     console.error('Usage: node scripts/check-vision.js "C:\\path\\to\\image.jpg"');
-    process.exit(1);
+    process.exitCode = 1;
+    return;
   }
 
   console.log(`Model: ${config.llama.model} @ ${config.llama.baseUrl}\n`);
@@ -33,7 +34,8 @@ function finish(data) {
   // 1) Reachability
   if (!(await llm.health())) {
     console.error('❌ STEP 1: llama.cpp /health not reachable. Is the server running on :8080?');
-    process.exit(1);
+    process.exitCode = 1;
+    return;
   }
   console.log('✅ STEP 1: server reachable');
 
@@ -43,14 +45,16 @@ function finish(data) {
     textData = await llm.rawCompletion([{ role: 'user', content: 'Reply with exactly: hello' }], { maxTokens: 16, temperature: 0 });
   } catch (err) {
     console.error('❌ STEP 2: text completion failed:', err.message);
-    process.exit(1);
+    process.exitCode = 1;
+    return;
   }
   const textOut = content(textData);
   if (!textOut) {
     console.error('❌ STEP 2: text reply was EMPTY (finish_reason: ' + finish(textData) + ').');
     console.error('   The model is loaded but not generating — likely a wrong/incompatible model or chat template.');
     console.error('   Full response:\n' + JSON.stringify(textData, null, 2).slice(0, 1200));
-    process.exit(1);
+    process.exitCode = 1;
+    return;
   }
   console.log(`✅ STEP 2: text generation works → "${textOut}"`);
 
@@ -66,12 +70,13 @@ function finish(data) {
   let visionData;
   try {
     visionData = await llm.rawCompletion([llm.userMessage(analyzer.ANALYSIS_PROMPT, dataUrl)], {
-      maxTokens: 96,
-      temperature: 0.2,
+      maxTokens: 256,
+      temperature: 0.4,
     });
   } catch (err) {
     console.error('\n❌ STEP 3: vision request errored:', err.message);
-    process.exit(1);
+    process.exitCode = 1;
+    return;
   }
   const totalSecs = ((Date.now() - started) / 1000).toFixed(1);
 
@@ -86,22 +91,50 @@ function finish(data) {
   console.log('output          :', visionOut ? visionOut.slice(0, 200) : '(empty)');
   console.log('────────────────────────────────');
 
-  // Interpret: if prompt_tokens dwarfs the image-token budget, the server is
-  // tokenizing the base64 string as TEXT — i.e. the OpenAI image_url path is
-  // not applying the vision projector in this build.
+  // prompt_tokens ≈ 318 → the image IS parsed as an image (not base64 text).
   if (typeof promptTokens === 'number' && promptTokens > 1200) {
-    console.log('\n❌ DIAGNOSIS: the image was tokenized as TEXT (' + promptTokens + ' prompt tokens).');
-    console.log('   Your llama.cpp /v1/chat/completions is NOT treating image_url as an image.');
-    console.log('   The web UI works because it uses a different image mechanism.');
-    console.log('\n   → Capture the exact request the UI sends (browser DevTools ▸ Network ▸ the');
-    console.log('     POST when you submit an image) and share the endpoint + JSON shape, OR');
-    console.log('     upgrade/launch llama.cpp so /v1/chat/completions supports image_url.');
-    process.exit(3);
+    console.log('\n❌ The image was tokenized as TEXT (' + promptTokens + ' prompt tokens) — image_url not applied.');
+    process.exitCode = 3;
+    return;
   }
+
   if (!visionOut) {
-    console.log('\n⚠️  Image looks parsed (' + promptTokens + ' prompt tokens) but no text was produced.');
-    console.log('   Try a larger max_tokens or a simpler prompt; share the server console output.');
-    process.exit(2);
+    // Image parsed + tokens generated but empty text. Show the raw tokens and
+    // compare against a simple UI-style prompt to localise the cause.
+    console.log('\n⚠️  Image parsed (' + promptTokens + ' prompt tokens) and ' + (usage.completion_tokens ?? '?') +
+      ' tokens were generated, but the text is empty.');
+    console.log('\nRaw message object:\n' + JSON.stringify(visionData.choices?.[0]?.message));
+
+    console.log('\n— Comparison A: simple UI-style prompt —');
+    const simple = await llm.rawCompletion(
+      [llm.userMessage('Describe the skin condition you see in this photo in 1-2 sentences.', dataUrl)],
+      { maxTokens: 160, temperature: 0.7 }
+    );
+    const simpleOut = content(simple);
+    console.log('output:', simpleOut ? simpleOut.slice(0, 300) : '(empty)');
+
+    console.log('\n— Comparison B: structured prompt, image listed FIRST —');
+    const imageFirst = {
+      role: 'user',
+      content: [
+        { type: 'image_url', image_url: { url: dataUrl } },
+        { type: 'text', text: analyzer.ANALYSIS_PROMPT },
+      ],
+    };
+    const bData = await llm.rawCompletion([imageFirst], { maxTokens: 256, temperature: 0.4 });
+    const bOut = content(bData);
+    console.log('output:', bOut ? bOut.slice(0, 300) : '(empty)');
+
+    console.log('\n──────── VERDICT ────────');
+    if (simpleOut || bOut) {
+      console.log('A simpler prompt and/or image-first ordering DOES produce text →');
+      console.log('the structured prompt was the problem. Tell Claude this and it will fix the analyzer.');
+    } else {
+      console.log('Even a simple prompt returns empty though tokens are generated →');
+      console.log('likely an image-token/chat-template quirk in this build. Share the raw message object above.');
+    }
+    process.exitCode = 2;
+    return;
   }
 
   const parsed = analyzer.parse(visionOut);
@@ -109,9 +142,10 @@ function finish(data) {
   console.log('Matched scores:', parsed.matchedCount, '/ 10 | acne:', parsed.metrics.acne);
   if (parsed.isEmpty) {
     console.log('\n⚠️  The model replied but with no scores — check the raw output above.');
-  } else if (Object.values(parsed.metrics).every((v) => v === 0)) {
-    console.log('\n⚠️  All scores 0 — the model likely is not truly reading the image (confirm --mmproj).');
   } else {
     console.log('\n✅ Vision analysis is working end-to-end.');
   }
-})();
+})().catch((err) => {
+  console.error('Unexpected error:', err);
+  process.exitCode = 1;
+});
