@@ -69,9 +69,23 @@ router.post(
     const recommended = recommendFor(parsed, products);
 
     // Optional ML cross-validation summary sent from the browser TF pass.
+    // Coerce defensively — values may arrive as arrays/typed-arrays from
+    // TensorFlow and must not break the save.
     let mlValidation = {};
     try {
-      if (req.body.mlValidation) mlValidation = JSON.parse(req.body.mlValidation);
+      if (req.body.mlValidation) {
+        const v = JSON.parse(req.body.mlValidation);
+        const num = (x) => {
+          if (Array.isArray(x)) x = x[0];
+          const n = Number(x);
+          return Number.isFinite(n) ? n : 0;
+        };
+        mlValidation = {
+          validated: !!v.validated,
+          confidence: num(v.confidence),
+          faceDetected: !!v.faceDetected,
+        };
+      }
     } catch (_) {
       /* ignore malformed ML payload */
     }

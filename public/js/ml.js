@@ -8,6 +8,14 @@ let blazefaceModel = null;
 let mlModelLoadAttempted = false;
 let mlModelLoadFailed = false;
 
+// BlazeFace returns `probability` as a 1-element array (or typed array); reduce
+// it to a plain number so it serializes cleanly and the backend can store it.
+function toScalar(v, fallback = 0.5) {
+  if (Array.isArray(v) || ArrayBuffer.isView(v)) v = v[0];
+  const n = Number(v);
+  return Number.isFinite(n) ? n : fallback;
+}
+
 async function loadMLModels() {
   if (mlModelLoadAttempted) return !mlModelLoadFailed;
   mlModelLoadAttempted = true;
@@ -49,7 +57,7 @@ async function analyzeWithMLModels(imageFile) {
               URL.revokeObjectURL(imageUrl);
               return resolve({ faceDetected: true, faceCount: predictions.length, multipleFaces: true, skipAnalysis: true });
             }
-            if (predictions.length > 0) { mlResults.confidence = predictions[0].probability || 0.5; mlResults.bodyPartDetected = 'face'; }
+            if (predictions.length > 0) { mlResults.confidence = toScalar(predictions[0].probability); mlResults.bodyPartDetected = 'face'; }
           } catch (_) { /* fall back to pixel analysis */ }
         }
 
