@@ -31,11 +31,23 @@ async function api(path, { method = 'GET', body, isForm = false } = {}) {
   if (!res.ok) {
     const err = new Error(data.error || `Request failed (${res.status})`);
     err.status = res.status;
+    err.code = data.code; // e.g. 'not_human_skin'
     err.raw = data.raw; // e.g. the model's unparseable output, for debugging
     throw err;
   }
   return data;
 }
+
+// Metric display order (matches the radar chart axes).
+const METRIC_ORDER = [
+  ['dryness', 'Dryness'], ['dehydration', 'Dehydration'], ['wrinkles', 'Wrinkles'],
+  ['sagging', 'Sagging'], ['sensitivity', 'Sensitivity'], ['redness', 'Redness'],
+  ['blockedPores', 'Blocked Pores'], ['enlargedPores', 'Enlarged Pores'],
+  ['acne', 'Acne'], ['pigmentation', 'Pigmentation'],
+];
+
+// Per-analysis UI context so corrections can redraw the chart/grid in place.
+const analysisStore = {};
 
 function toast(message) {
   const el = document.createElement('div');
@@ -559,6 +571,10 @@ async function handleChatImage(event) {
     displayChatAnalysis(result, mlResults);
   } catch (err) {
     document.getElementById('analyzingMsg')?.remove();
+    if (err.code === 'not_human_skin') {
+      addMessage('assistant', `🚫 ${err.message} <br><br><button class="btn btn-primary btn-full" onclick="triggerChatImageUpload()">📸 Upload a Different Photo</button>`);
+      return;
+    }
     const detail = err.raw ? `<div style="font-size:.75rem;opacity:.6;margin-top:.5rem;white-space:pre-wrap;">Model said: ${err.raw.substring(0, 200)}…</div>` : '';
     addMessage('assistant', `${err.message || 'Sorry, I could not analyze the photo. Please try again.'}${detail}`);
   }
@@ -582,7 +598,8 @@ function recCarouselHTML(title, recs) {
 
 function displayChatAnalysis(result, mlResults) {
   const { analysisId, bodyPart, skinType, metrics, topConcerns, recommendation, recommendedProducts } = result;
-  const canvasId = 'analysis-' + Date.now();
+  const canvasId = 'canvas-' + analysisId;
+  analysisStore[analysisId] = { metrics, skinType, mlResults, canvasId };
   const container = document.getElementById('chatMessages');
   const div = document.createElement('div');
   div.className = 'message assistant';
@@ -593,7 +610,7 @@ function displayChatAnalysis(result, mlResults) {
         <div class="analysis-header"><h3>Professional Skin Analysis</h3>
           <div class="analysis-subtitle">${cap(bodyPart)} - ${cap(skinType)} Skin</div></div>
         <div class="radar-container"><canvas id="${canvasId}" width="400" height="400"></canvas></div>
-        <div class="metrics-grid">${metricsGridHTML(metrics)}</div>
+        <div class="metrics-grid" id="grid-${analysisId}">${metricsGridHTML(metrics)}</div>
         <div class="analysis-summary"><div class="summary-title">Top Concerns</div><div>${topConcerns}</div></div>
         <div class="analysis-summary"><div class="summary-title">Professional Recommendation</div><div>${recommendation || '—'}</div></div>
         ${mlResults && mlResults.mlConcerns ? `<div class="ml-status-box"><div style="display:flex;align-items:center;gap:.5rem;font-size:.9rem;">
@@ -620,53 +637,81 @@ function cap(s) { return (s || '').charAt(0).toUpperCase() + (s || '').slice(1);
 
 function feedbackSectionHTML(analysisId) {
   return `<div class="feedback-section" id="feedback-${analysisId}">
-    <div class="feedback-title">📋 How accurate is this analysis?</div>
-    <div class="feedback-buttons">
-      <button class="feedback-btn" onclick="handleFeedback('${analysisId}','totally-agree',this)"><span class="feedback-emoji">😊</span> Totally agree</button>
-      <button class="feedback-btn" onclick="handleFeedback('${analysisId}','partially-agree',this)"><span class="feedback-emoji">🙂</span> Partially agree</button>
-      <button class="feedback-btn" onclick="handleFeedback('${analysisId}','no-idea',this)"><span class="feedback-emoji">😐</span> Not sure</button>
-      <button class="feedback-btn" onclick="handleFeedback('${analysisId}','partially-disagree',this)"><span class="feedback-emoji">😕</span> Partially disagree</button>
-      <button class="feedback-btn" onclick="handleFeedback('${analysisId}','totally-disagree',this)"><span class="feedback-emoji">😞</span> Totally disagree</button>
+    <div class="feedback-title">Is this analysis accurate?</div>
+    <div style="display:flex;gap:.6rem;flex-wrap:wrap;">
+      <button class="btn btn-primary" style="flex:1;min-width:140px;" onclick="confirmAnalysis('${analysisId}')">✓ Looks accurate</button>
+      <button class="btn" style="flex:1;min-width:140px;background:var(--sand);color:var(--forest);" onclick="adjustAnalysis('${analysisId}')">✎ Adjust scores</button>
     </div>
+    <div style="font-size:.72rem;opacity:.6;margin-top:.6rem;text-align:center;">Your feedback continuously trains the analyzer to score more accurately.</div>
   </div>`;
 }
 
-async function handleFeedback(analysisId, rating, btn) {
+// User confirms the analysis — positive reinforcement for the calibration loop.
+async function confirmAnalysis(analysisId) {
   const section = document.getElementById('feedback-' + analysisId);
-  section.querySelectorAll('.feedback-btn').forEach((b) => b.classList.remove('selected'));
-  btn.classList.add('selected');
-  await api('/feedback', { method: 'POST', body: { analysisId, rating } }).catch(() => {});
-
-  if (rating === 'totally-agree' || rating === 'partially-agree') {
-    section.innerHTML = `<div style="text-align:center;padding:1rem;color:var(--forest);"><div style="font-size:2rem;">✅</div><div style="font-weight:600;">Thank you for your feedback!</div></div>`;
-  } else if (rating === 'no-idea') {
-    section.innerHTML = `<div style="text-align:center;padding:1rem;color:var(--sage);"><div style="font-size:2rem;">💡</div><div style="font-weight:600;">Ask me anything about these metrics!</div></div>`;
-  } else {
-    section.innerHTML = `<div style="padding:1rem;">
-      <div style="font-weight:600;color:var(--forest);margin-bottom:.8rem;text-align:center;">What seems incorrect?</div>
-      <textarea id="fb-reason-${analysisId}" class="feedback-textarea" placeholder="E.g. 'My skin isn't that dry'…"></textarea>
-      <button class="btn btn-primary btn-full" style="margin-top:.5rem;" onclick="submitReeval('${analysisId}')">🔄 Re-evaluate Analysis</button></div>`;
+  await api(`/analysis/${analysisId}/confirm`, { method: 'POST' }).catch(() => {});
+  if (section) {
+    section.innerHTML = `<div style="text-align:center;padding:1rem;color:var(--forest);">
+      <div style="font-size:1.8rem;">🙌</div><div style="font-weight:600;">Thanks for confirming!</div>
+      <div style="font-size:.8rem;opacity:.75;margin-top:.3rem;">This reinforces the analyzer's accuracy.</div></div>`;
   }
+  toast('Thanks! Feedback recorded 🙌');
 }
 
-async function submitReeval(analysisId) {
-  const reason = document.getElementById('fb-reason-' + analysisId)?.value.trim();
+// User opens the score-correction panel (sliders pre-filled with current values).
+function adjustAnalysis(analysisId) {
   const section = document.getElementById('feedback-' + analysisId);
-  if (!reason) { toast('Please tell us what seems wrong'); return; }
-  if (!State.currentImageFile) { section.innerHTML = '<div style="text-align:center;padding:1rem;color:var(--clay);">Please upload the photo again to re-evaluate.</div>'; return; }
+  const metrics = analysisStore[analysisId]?.metrics || {};
+  section.innerHTML = `
+    <div class="feedback-title">Drag to set the correct scores</div>
+    <div>
+      ${METRIC_ORDER.map(([k, l]) => {
+        const v = metrics[k] ?? 0;
+        return `<div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.45rem;">
+          <span style="width:108px;font-size:.78rem;">${l}</span>
+          <input type="range" min="0" max="10" value="${v}" data-key="${k}" style="flex:1;"
+            oninput="document.getElementById('val-${analysisId}-${k}').textContent=this.value">
+          <span id="val-${analysisId}-${k}" style="width:22px;text-align:right;font-weight:700;color:var(--forest);">${v}</span>
+        </div>`;
+      }).join('')}
+    </div>
+    <button class="btn btn-primary btn-full" style="margin-top:.6rem;" onclick="submitCorrection('${analysisId}', this)">Save corrected scores</button>
+    <button class="btn btn-full" style="margin-top:.5rem;background:var(--sand);color:var(--forest);" onclick="resetFeedback('${analysisId}')">Cancel</button>`;
+}
 
-  section.innerHTML = `<div class="re-evaluating"><span class="loading"></span><br>Re-evaluating with your feedback…</div>`;
+// Restore the confirm/adjust buttons (used by Adjust → Cancel).
+function resetFeedback(analysisId) {
+  const section = document.getElementById('feedback-' + analysisId);
+  if (section) section.outerHTML = feedbackSectionHTML(analysisId);
+}
+
+// User submits corrected scores → backend learns the model's bias.
+async function submitCorrection(analysisId, btn) {
+  const section = document.getElementById('feedback-' + analysisId);
+  const metrics = {};
+  section.querySelectorAll('input[type=range]').forEach((i) => { metrics[i.dataset.key] = Number(i.value); });
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="loading"></span>';
   try {
-    const form = new FormData();
-    form.append('image', State.currentImageFile);
-    form.append('feedback', reason);
-    const result = await api(`/analysis/${analysisId}/reevaluate`, { method: 'POST', body: form, isForm: true });
-    section.innerHTML = `<div style="text-align:center;padding:1rem;background:var(--sand);border-radius:8px;">
-      <div style="font-size:1.5rem;">✅</div><div style="font-weight:600;color:var(--forest);">Analysis Updated!</div>
-      <div style="font-size:.85rem;opacity:.8;margin-top:.5rem;">Revised based on: "${reason.substring(0, 50)}"</div></div>`;
-    displayChatAnalysis(result, null);
+    const result = await api(`/analysis/${analysisId}/correct`, { method: 'POST', body: { metrics } });
+
+    // Redraw chart + metric grid in place with the corrected values.
+    const ctx = analysisStore[analysisId] || {};
+    ctx.metrics = result.metrics;
+    analysisStore[analysisId] = ctx;
+    const grid = document.getElementById('grid-' + analysisId);
+    if (grid) grid.innerHTML = metricsGridHTML(result.metrics);
+    if (ctx.canvasId) drawRadarChart(ctx.canvasId, result.metrics, result.skinType || ctx.skinType, ctx.mlResults);
+
+    section.innerHTML = `<div style="text-align:center;padding:1rem;color:var(--forest);">
+      <div style="font-size:1.7rem;">🧠✅</div><div style="font-weight:600;">Saved — thank you!</div>
+      <div style="font-size:.8rem;opacity:.75;margin-top:.3rem;">The analyzer will use your correction to score future photos more accurately.</div></div>`;
+    toast('Correction saved — analyzer updated 🧠');
   } catch (err) {
-    section.innerHTML = `<div style="text-align:center;padding:1rem;color:var(--clay);">${err.message}</div>`;
+    toast(err.message);
+    btn.disabled = false;
+    btn.textContent = 'Save corrected scores';
   }
 }
 
@@ -705,6 +750,13 @@ async function handleImage(event) {
       });
       displayStandaloneAnalysis(result, imgSrc, mlResults);
     } catch (err) {
+      if (err.code === 'not_human_skin') {
+        content.innerHTML = `<img src="${imgSrc}" class="preview-img" style="opacity:.5;">
+          <div style="padding:2rem;text-align:center;"><div style="font-size:3rem;">🚫</div>
+          <h3 style="color:#e65100;margin:.5rem 0;">Not Human Skin</h3><p style="color:#5d4037;">${err.message}</p>
+          <button class="btn btn-primary" style="margin-top:1rem;" onclick="retakePhoto()">📸 Upload Different Photo</button></div>`;
+        return;
+      }
       const detail = err.raw ? `<div style="font-size:.75rem;opacity:.6;margin-top:.5rem;white-space:pre-wrap;">Model said: ${err.raw.substring(0, 200)}…</div>` : '';
       content.innerHTML = `<img src="${imgSrc}" class="preview-img"><div style="text-align:center;color:var(--clay);padding:2rem;">${err.message || 'Analysis failed. Please try again.'}${detail}</div><button class="btn btn-primary btn-full" onclick="retakePhoto()">Try Again</button>`;
     }
@@ -713,18 +765,20 @@ async function handleImage(event) {
 }
 
 function displayStandaloneAnalysis(result, imgSrc, mlResults) {
-  const { bodyPart, skinType, metrics, topConcerns, recommendation, recommendedProducts } = result;
-  const canvasId = 'standalone-' + Date.now();
+  const { analysisId, bodyPart, skinType, metrics, topConcerns, recommendation, recommendedProducts } = result;
+  const canvasId = 'canvas-' + analysisId;
+  analysisStore[analysisId] = { metrics, skinType, mlResults, canvasId };
   const content = document.getElementById('analyzerContent');
   content.innerHTML = `
     <img src="${imgSrc}" class="preview-img">
     <div class="pro-analysis">
       <div class="analysis-header"><h3>Professional Skin Analysis</h3><div class="analysis-subtitle">${cap(bodyPart)} - ${cap(skinType)} Skin</div></div>
       <div class="radar-container"><canvas id="${canvasId}" width="400" height="400"></canvas></div>
-      <div class="metrics-grid">${metricsGridHTML(metrics)}</div>
+      <div class="metrics-grid" id="grid-${analysisId}">${metricsGridHTML(metrics)}</div>
       <div class="analysis-summary"><div class="summary-title">Top Concerns</div><div>${topConcerns}</div></div>
       <div class="analysis-summary"><div class="summary-title">Professional Recommendation</div><div>${recommendation || '—'}</div></div>
       ${mlResults && mlResults.mlConcerns ? `<div class="ml-status-box"><div style="display:flex;align-items:center;gap:.5rem;font-size:.9rem;"><span>✅</span><span class="ml-status-title">ML Cross-Validation Active</span><span class="ml-confidence-badge">${Math.round((mlResults.confidence || 0) * 100)}% confidence</span></div></div>` : ''}
+      ${feedbackSectionHTML(analysisId)}
       ${recommendedProducts?.length ? recCarouselHTML(`Top products for your ${bodyPart}:`, recommendedProducts) : ''}
       <div style="margin-top:1.5rem;display:flex;gap:1rem;flex-wrap:wrap;">
         <button class="btn btn-primary" style="flex:1;min-width:140px;" onclick="retakePhoto()">📸 New Analysis</button>
@@ -753,7 +807,7 @@ function chatAboutAnalysis() {
 // ===========================================================================
 // Admin dashboard
 // ===========================================================================
-const ADMIN_TABS = ['Overview', 'Products', 'Orders', 'Analyses', 'Feedback', 'Security'];
+const ADMIN_TABS = ['Overview', 'Products', 'Orders', 'Analyses', 'Calibration', 'Feedback', 'Security'];
 let adminActiveTab = 'Overview';
 
 function openAdmin() {
@@ -767,7 +821,7 @@ function closeAdmin() { document.getElementById('adminView').classList.remove('a
 function adminSwitch(tab) {
   adminActiveTab = tab;
   document.querySelectorAll('.admin-tab').forEach((b) => b.classList.toggle('active', b.textContent === tab));
-  const fns = { Overview: adminOverview, Products: adminProducts, Orders: adminOrders, Analyses: adminAnalyses, Feedback: adminFeedback, Security: adminSecurity };
+  const fns = { Overview: adminOverview, Products: adminProducts, Orders: adminOrders, Analyses: adminAnalyses, Calibration: adminCalibration, Feedback: adminFeedback, Security: adminSecurity };
   document.getElementById('adminContent').innerHTML = '<div class="empty-state">Loading…</div>';
   fns[tab]();
 }
@@ -856,6 +910,19 @@ async function adminFeedback() {
     ${feedback.map((f) => `<tr><td>${f.rating}</td><td>${f.comment || '—'}</td><td>${new Date(f.createdAt).toLocaleDateString()}</td></tr>`).join('') || '<tr><td colspan="3">None</td></tr>'}
   </tbody></table>`;
 }
+async function adminCalibration() {
+  const c = await api('/admin/calibration');
+  document.getElementById('adminContent').innerHTML = `
+    <div class="admin-stat-grid">
+      <div class="admin-stat"><div class="admin-stat-value">${c.corrections}</div><div class="admin-stat-label">Corrections learned</div></div>
+      <div class="admin-stat"><div class="admin-stat-value">${c.confirmations}</div><div class="admin-stat-label">Confirmations</div></div>
+    </div>
+    <p style="font-size:.82rem;opacity:.7;margin-bottom:1rem;">Learned per-metric correction applied to every new analysis (positive = the model under-scores this metric, negative = it over-scores). Offsets activate after a few corrections.</p>
+    <table class="admin-table"><thead><tr><th>Metric</th><th>Samples</th><th>Applied offset</th></tr></thead><tbody>
+      ${c.perMetric.map((m) => `<tr><td>${m.metric}</td><td>${m.samples}</td><td style="font-weight:700;color:${m.offset > 0 ? '#c0392b' : m.offset < 0 ? '#2d7a2d' : 'inherit'};">${m.offset > 0 ? '+' : ''}${m.offset}</td></tr>`).join('')}
+    </tbody></table>`;
+}
+
 async function adminSecurity() {
   const { logs } = await api('/admin/security');
   document.getElementById('adminContent').innerHTML = `<table class="admin-table"><thead><tr><th>Type</th><th>Keyword</th><th>Message</th><th>Date</th></tr></thead><tbody>

@@ -13,6 +13,7 @@ const AnalysisSchema = new Schema(
     bodyPart: { type: String, default: 'skin' },
     skinType: { type: String, default: 'normal' },
 
+    // Displayed (calibrated) metrics.
     metrics: {
       dryness: Number,
       dehydration: Number,
@@ -26,6 +27,10 @@ const AnalysisSchema = new Schema(
       pigmentation: Number,
     },
 
+    // Raw model output before calibration — kept so corrections measure the
+    // model's true bias (true - model), not the post-calibration value.
+    modelMetrics: { type: Schema.Types.Mixed, default: {} },
+
     topConcerns: { type: String, default: '' },
     recommendation: { type: String, default: '' },
 
@@ -38,6 +43,7 @@ const AnalysisSchema = new Schema(
 
     reviewerVerdict: { type: String, default: '' }, // PASS / NEEDS_REVISION
     revised: { type: Boolean, default: false },
+    userConfirmed: { type: Boolean, default: false },
 
     recommendedProducts: [{ type: Schema.Types.ObjectId, ref: 'Product' }],
   },

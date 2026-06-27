@@ -4,8 +4,10 @@ const express = require('express');
 const multer = require('multer');
 const Product = require('../models/Product');
 const Analysis = require('../models/Analysis');
+const Feedback = require('../models/Feedback');
 const analyzer = require('../services/agents/analyzer');
 const reviewer = require('../services/agents/reviewer');
+const calibration = require('../services/calibration');
 const { asyncHandler } = require('../middleware/errorHandler');
 
 const router = express.Router();
@@ -44,17 +46,33 @@ router.post(
     const raw = await analyzer.analyze(dataUrl);
     const parsed = analyzer.parse(raw);
 
+    // Human-skin gate: the model decides if the photo is human skin at all.
+    if (!parsed.isSkin) {
+      return res.status(422).json({
+        code: 'not_human_skin',
+        error:
+          "That photo doesn't look like human skin. Please upload a clear photo of your face, hand, arm, or other skin area.",
+      });
+    }
+
     // The model returned text we couldn't turn into scores. Surface a real
     // error (with the raw output) instead of a misleading all-zero chart —
     // this usually means the vision projector (--mmproj) isn't loaded or the
     // model ignored the format.
     if (parsed.isEmpty) {
       return res.status(422).json({
+        code: 'unreadable',
         error:
           "The AI returned an analysis we couldn't read as scores. If this keeps happening, make sure llama.cpp was started with the multimodal projector (--mmproj) so it can see the photo.",
         raw: raw.slice(0, 600),
       });
     }
+
+    // Apply the learned human-feedback calibration to the raw model scores.
+    const modelMetrics = parsed.metrics;
+    const offsets = await calibration.getOffsets();
+    const metrics = calibration.applyTo(modelMetrics, offsets);
+    const topConcerns = analyzer.computeTopConcerns(metrics) || parsed.topConcerns;
 
     // Peer review (best-effort).
     let reviewerVerdict = 'PASS';
@@ -66,7 +84,7 @@ router.post(
     }
 
     const products = (await Product.find({ active: true })).map((p) => p.toStorefront());
-    const recommended = recommendFor(parsed, products);
+    const recommended = recommendFor({ topConcerns }, products);
 
     // Optional ML cross-validation summary sent from the browser TF pass.
     // Coerce defensively — values may arrive as arrays/typed-arrays from
@@ -94,8 +112,9 @@ router.post(
       user: req.user?._id || null,
       bodyPart: parsed.bodyPart,
       skinType: parsed.skinType,
-      metrics: parsed.metrics,
-      topConcerns: parsed.topConcerns,
+      metrics,
+      modelMetrics,
+      topConcerns,
       recommendation: parsed.recommendation,
       reviewerVerdict,
       mlValidation,
@@ -106,15 +125,85 @@ router.post(
     if (req.user) {
       req.user.skinProfile = {
         skinType: parsed.skinType,
-        concerns: parsed.topConcerns.split(',').map((c) => c.trim()).slice(0, 3),
+        concerns: topConcerns.split(',').map((c) => c.trim()).slice(0, 3),
       };
       await req.user.save().catch(() => {});
     }
 
     res.status(201).json({
       analysisId: record._id.toString(),
-      ...parsed,
+      bodyPart: parsed.bodyPart,
+      skinType: parsed.skinType,
+      metrics,
+      topConcerns,
+      recommendation: parsed.recommendation,
       reviewerVerdict,
+      recommendedProducts: recommended,
+    });
+  })
+);
+
+/**
+ * POST /api/analysis/:id/confirm — user confirms the analysis is accurate.
+ * Positive reinforcement signal for the calibration loop.
+ */
+router.post(
+  '/:id/confirm',
+  asyncHandler(async (req, res) => {
+    const record = await Analysis.findById(req.params.id);
+    if (record) {
+      record.userConfirmed = true;
+      await record.save().catch(() => {});
+    }
+    await calibration.recordConfirmation();
+    await Feedback.create({ analysis: record?._id || null, user: req.user?._id || null, rating: 'totally-agree' }).catch(() => {});
+    res.json({ ok: true });
+  })
+);
+
+/**
+ * POST /api/analysis/:id/correct — user provides corrected scores.
+ * This is the core human-feedback signal: we learn the model's per-metric bias
+ * (true - model) and apply it to future analyses.
+ */
+router.post(
+  '/:id/correct',
+  asyncHandler(async (req, res) => {
+    const userMetrics = req.body?.metrics || {};
+    const record = await Analysis.findById(req.params.id);
+    if (!record) return res.status(404).json({ error: 'Analysis not found' });
+
+    // Learn from the delta against the ORIGINAL model output.
+    const base = (record.modelMetrics && Object.keys(record.modelMetrics).length ? record.modelMetrics : record.metrics) || {};
+    await calibration.recordCorrection(base, userMetrics);
+
+    // Store the user's truth as the displayed metrics.
+    const corrected = {};
+    for (const m of calibration.METRICS) {
+      corrected[m] = Math.max(0, Math.min(10, Math.round(Number(userMetrics[m]) ?? record.metrics[m] ?? 0)));
+    }
+    record.metrics = corrected;
+    record.topConcerns = analyzer.computeTopConcerns(corrected) || record.topConcerns;
+    record.revised = true;
+    await record.save();
+
+    await Feedback.create({
+      analysis: record._id,
+      user: req.user?._id || null,
+      rating: 'partially-disagree',
+      comment: 'user score correction',
+    }).catch(() => {});
+
+    const products = (await Product.find({ active: true })).map((p) => p.toStorefront());
+    const recommended = recommendFor({ topConcerns: record.topConcerns }, products);
+
+    res.json({
+      analysisId: record._id.toString(),
+      bodyPart: record.bodyPart,
+      skinType: record.skinType,
+      metrics: corrected,
+      topConcerns: record.topConcerns,
+      recommendation: record.recommendation,
       recommendedProducts: recommended,
     });
   })

@@ -54,6 +54,28 @@ A third, independent check runs **client-side** (`ml.js`): TensorFlow.js
 BlazeFace + LAB/Sobel pixel analysis overlays an ML "second opinion" on the
 radar chart.
 
+### Human-feedback calibration loop ("RL-style")
+
+The local Gemma grader is imperfect (it can under/over-rate metrics). Rather
+than retrain the GGUF weights (not possible locally), the system **learns its
+systematic bias from real users**:
+
+- Every analysis shows **"✓ Looks accurate"** and **"✎ Adjust scores"**.
+- "Adjust" opens sliders; the user sets the true 0-10 values.
+- The backend records `(trueValue − modelValue)` per metric and, once enough
+  samples exist, applies the learned **offset** to every future analysis
+  (`src/services/calibration.js`). Confirmations reinforce; corrections steer.
+- The admin **Calibration** tab shows each metric's sample count and applied
+  offset. Raw model scores are kept (`Analysis.modelMetrics`) so corrections
+  always measure the model's true bias.
+
+### Human-skin gate
+
+Before scoring, the analyzer agent decides `IS_HUMAN_SKIN: yes/no`. Non-skin
+images (objects, screenshots, animals, etc.) return a friendly "not human
+skin" message instead of a chart. This complements the existing client-side
+pixel pre-check (`preValidateSkinImage`).
+
 ---
 
 ## Prerequisites

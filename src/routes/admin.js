@@ -111,6 +111,15 @@ router.get(
   })
 );
 
+/** GET /api/admin/calibration — learned human-feedback calibration state. */
+router.get(
+  '/calibration',
+  asyncHandler(async (_req, res) => {
+    const calibration = require('../services/calibration');
+    res.json(await calibration.summary());
+  })
+);
+
 /** GET /api/admin/security — flagged probing attempts. */
 router.get(
   '/security',

@@ -8,10 +8,21 @@ const llm = require('../llm');
  * original PureGlow app parsed.
  */
 
-const ANALYSIS_PROMPT = `You are a professional dermatology analysis assistant. Look carefully at the provided skin photo and rate what you actually see.
+const ANALYSIS_PROMPT = `You are a careful dermatology vision assistant.
 
-Reply with ONLY the lines below. Replace every <int> with a real whole number 0-10 based on the photo (0 = none, 10 = severe). Do NOT use markdown, asterisks, brackets, or any extra prose. Do NOT echo the words "0-10" or leave any placeholder.
+STEP 1 — Decide if the photo actually shows HUMAN SKIN (a real human face or body part). If it does NOT (an object, animal, food, screenshot, drawing, landscape, blank/blurry image, etc.), reply with EXACTLY this single line and nothing else:
+IS_HUMAN_SKIN: no
 
+STEP 2 — If it IS human skin, score what is actually visible using this guide (0 = none, 3 = mild, 6 = moderate, 9 = severe):
+- ACNE: count visible pimples, pustules, papules and comedones. A few small spots = 2-3; many inflamed lesions across a cheek/region = 7-9. Do NOT underrate clearly visible acne.
+- REDNESS: visible erythema / inflammation; calm even tone = 0-2.
+- BLOCKED_PORES / ENLARGED_PORES: only when pores are clearly congested or visibly large; smooth skin = 0-2. Do NOT inflate pore scores when skin looks smooth.
+- DRYNESS / DEHYDRATION: flaking, tightness, dull rough texture.
+- WRINKLES / SAGGING: only for visible lines or laxity.
+- PIGMENTATION: dark spots, uneven tone, post-acne marks.
+
+Reply with ONLY the lines below, plain text, no markdown, no brackets, each <int> a whole number 0-10:
+IS_HUMAN_SKIN: yes
 BODY_PART: <one of face/hand/foot/arm/leg/back>
 SKIN_TYPE: <one of dry/normal/oily/combination>
 DRYNESS: <int>
@@ -96,6 +107,10 @@ function parse(text) {
     .replace(/[*_`#>]/g, '')
     .replace(/\[?\s*0\s*[-–—]\s*10\s*\]?/g, ' '); // drop the [0-10] scale hint
 
+  // Human-skin gate: the model answers IS_HUMAN_SKIN: yes/no first.
+  const skinMatch = clean.match(/IS[_ ]?HUMAN[_ ]?SKIN\s*[:=]\s*(yes|no|true|false)/i);
+  const isSkin = skinMatch ? /yes|true/i.test(skinMatch[1]) : true;
+
   let matchedCount = 0;
   for (const [key, pat] of METRIC_DEFS) {
     // LABEL [: = -] <number>, tolerating markdown/spacing already stripped.
@@ -119,19 +134,25 @@ function parse(text) {
   recommendation = grab('RECOMMENDATION');
 
   // Derive top concerns from the highest metrics if the model omitted/mismatched them.
-  const pairs = Object.entries(metrics).sort((a, b) => b[1] - a[1]);
-  const computed = pairs
-    .filter(([, v]) => v > 0)
-    .slice(0, 3)
-    .map(([k, v]) => `${k.replace(/([A-Z])/g, ' $1').replace(/^./, (s) => s.toUpperCase())} (${v}/10)`)
-    .join(', ');
-  if (!topConcerns || pairs[0][1] === 0) topConcerns = computed || 'No significant concerns detected';
+  const computed = computeTopConcerns(metrics);
+  const highest = Math.max(...Object.values(metrics));
+  if (!topConcerns || highest === 0) topConcerns = computed || 'No significant concerns detected';
 
   // The result is "empty" if the model gave us no usable scores — this lets the
   // route surface a real error instead of a misleading all-zero chart.
   const isEmpty = matchedCount === 0;
 
-  return { bodyPart, skinType, metrics, topConcerns, recommendation, isEmpty, matchedCount, raw: text };
+  return { bodyPart, skinType, metrics, topConcerns, recommendation, isSkin, isEmpty, matchedCount, raw: text };
 }
 
-module.exports = { analyze, reEvaluate, parse, ANALYSIS_PROMPT };
+/** Build a "Concern (n/10)" top-3 string from a metrics object. */
+function computeTopConcerns(metrics) {
+  return Object.entries(metrics)
+    .sort((a, b) => b[1] - a[1])
+    .filter(([, v]) => v > 0)
+    .slice(0, 3)
+    .map(([k, v]) => `${k.replace(/([A-Z])/g, ' $1').replace(/^./, (s) => s.toUpperCase())} (${v}/10)`)
+    .join(', ');
+}
+
+module.exports = { analyze, reEvaluate, parse, computeTopConcerns, ANALYSIS_PROMPT };
