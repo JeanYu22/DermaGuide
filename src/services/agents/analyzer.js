@@ -34,21 +34,17 @@ RECOMMENDATION: <1-2 sentence professional, non-diagnostic advice>`;
 async function analyze(imageDataUrl, extraInstruction = '') {
   const text = extraInstruction ? `${ANALYSIS_PROMPT}\n\n${extraInstruction}` : ANALYSIS_PROMPT;
   const messages = [llm.userMessage(text, imageDataUrl)];
-  const data = await llm.rawCompletion(messages, { temperature: 0.2, maxTokens: 512 });
-  const raw = data.choices?.[0]?.message?.content?.trim() || '';
 
-  // Log the raw output so vision/format issues are diagnosable from server logs.
+  // Stream so slow CPU vision inference isn't killed by a total-duration cap;
+  // the inactivity timeout only fires if the model goes silent.
+  const started = Date.now();
+  const raw = await llm.collectStream(messages, { temperature: 0.2, maxTokens: 512 });
+  const secs = ((Date.now() - started) / 1000).toFixed(1);
+
   if (raw) {
-    console.log('🔬 analyzer raw output:\n' + raw.slice(0, 800));
+    console.log(`🔬 analyzer output in ${secs}s:\n` + raw.slice(0, 800));
   } else {
-    console.warn(
-      '🔬 analyzer EMPTY response. finish_reason=' +
-        (data.choices?.[0]?.finish_reason || '?') +
-        ' usage=' +
-        JSON.stringify(data.usage || {}) +
-        '\nFull response: ' +
-        JSON.stringify(data).slice(0, 600)
-    );
+    console.warn(`🔬 analyzer EMPTY response after ${secs}s (model produced no tokens).`);
   }
   return raw;
 }

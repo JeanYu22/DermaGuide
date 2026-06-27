@@ -59,27 +59,37 @@ function finish(data) {
   const ext = (path.extname(file).slice(1).toLowerCase() || 'jpeg').replace('jpg', 'jpeg');
   const dataUrl = `data:image/${ext};base64,${buf.toString('base64')}`;
   console.log(`\nSending ${path.basename(file)} (${(buf.length / 1024).toFixed(0)} KB)...`);
+  console.log('Streaming response (image encoding + prefill can take a while on CPU)…\n');
 
-  let visionData;
+  // Stream so we can see tokens flow and measure real latency, instead of a
+  // single request that looks "hung" until it finishes or times out.
+  let visionOut = '';
+  let firstTokenMs = null;
+  const started = Date.now();
   try {
-    visionData = await llm.rawCompletion([llm.userMessage(analyzer.ANALYSIS_PROMPT, dataUrl)], { maxTokens: 512, temperature: 0.2 });
+    for await (const delta of llm.streamChatCompletion(
+      [llm.userMessage(analyzer.ANALYSIS_PROMPT, dataUrl)],
+      { maxTokens: 512, temperature: 0.2, inactivityMs: 300000 }
+    )) {
+      if (firstTokenMs === null) {
+        firstTokenMs = Date.now() - started;
+        console.log(`(first token after ${(firstTokenMs / 1000).toFixed(1)}s)`);
+      }
+      visionOut += delta;
+      process.stdout.write(delta);
+    }
   } catch (err) {
-    console.error('\n❌ STEP 3: vision request errored:', err.message);
-    console.error('   A 4xx/5xx here usually means this build/model does not accept images at all.');
+    console.error('\n\n❌ STEP 3: vision stream errored:', err.message);
+    console.error('   If this says "aborted", the model went silent past the inactivity window.');
     process.exit(1);
   }
-
-  const visionOut = content(visionData);
-  console.log('\n───────── RAW VISION OUTPUT ─────────');
-  console.log(visionOut || '(empty)');
-  console.log('finish_reason:', finish(visionData));
-  console.log('─────────────────────────────────────');
+  const totalSecs = ((Date.now() - started) / 1000).toFixed(1);
+  console.log(`\n\n(completed in ${totalSecs}s)`);
+  visionOut = visionOut.trim();
 
   if (!visionOut) {
-    console.log('\n❌ DIAGNOSIS: Text works but the image request returned NOTHING.');
-    console.log('   → The server is running TEXT-ONLY. It has no multimodal projector loaded,');
-    console.log('     so it cannot see the photo. You must start it WITH --mmproj.');
-    console.log('\n   Full server response:\n' + JSON.stringify(visionData, null, 2).slice(0, 1000));
+    console.log('\n❌ DIAGNOSIS: text works but the image request produced NO tokens.');
+    console.log('   Check the server console for errors decoding the image.');
     process.exit(2);
   }
 

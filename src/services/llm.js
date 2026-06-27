@@ -78,6 +78,12 @@ async function chatCompletion(messages, options = {}) {
 
 /**
  * Streaming variant. Yields incremental content deltas as they arrive.
+ *
+ * Uses an INACTIVITY timeout (reset on every received chunk) rather than a
+ * single total-duration cap. This is important for slow CPU vision inference,
+ * where image encoding + prefill can take a long time before the first token
+ * but tokens then flow steadily — a fixed total timeout would kill a healthy
+ * generation mid-stream.
  */
 async function* streamChatCompletion(messages, options = {}) {
   const body = {
@@ -88,41 +94,65 @@ async function* streamChatCompletion(messages, options = {}) {
     stream: true,
   };
 
-  const res = await withTimeout((signal) =>
-    fetch(endpoint(), { method: 'POST', headers: authHeaders(), body: JSON.stringify(body), signal })
-  );
+  const inactivityMs = options.inactivityMs ?? config.llama.timeoutMs;
+  const controller = new AbortController();
+  let timer;
+  const arm = () => {
+    clearTimeout(timer);
+    timer = setTimeout(() => controller.abort(), inactivityMs);
+  };
+  arm();
 
-  if (!res.ok || !res.body) {
-    const detail = res.body ? await res.text().catch(() => '') : '';
-    throw new Error(`llama.cpp stream error ${res.status}: ${detail.slice(0, 300)}`);
-  }
+  try {
+    const res = await fetch(endpoint(), {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
 
-  const reader = res.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = '';
+    if (!res.ok || !res.body) {
+      const detail = res.body ? await res.text().catch(() => '') : '';
+      throw new Error(`llama.cpp stream error ${res.status}: ${detail.slice(0, 300)}`);
+    }
 
-  while (true) {
-    const { value, done } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
 
-    const lines = buffer.split('\n');
-    buffer = lines.pop() || '';
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      arm(); // saw activity → reset the inactivity timer
+      buffer += decoder.decode(value, { stream: true });
 
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (!trimmed.startsWith('data:')) continue;
-      const payload = trimmed.slice(5).trim();
-      if (payload === '[DONE]') return;
-      try {
-        const json = JSON.parse(payload);
-        const delta = json.choices?.[0]?.delta?.content;
-        if (delta) yield delta;
-      } catch (_) {
-        // Ignore keep-alive / partial frames.
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed.startsWith('data:')) continue;
+        const payload = trimmed.slice(5).trim();
+        if (payload === '[DONE]') return;
+        try {
+          const json = JSON.parse(payload);
+          const delta = json.choices?.[0]?.delta?.content;
+          if (delta) yield delta;
+        } catch (_) {
+          // Ignore keep-alive / partial frames.
+        }
       }
     }
+  } finally {
+    clearTimeout(timer);
   }
+}
+
+/** Collect a full streamed completion into a single string. */
+async function collectStream(messages, options = {}) {
+  let out = '';
+  for await (const delta of streamChatCompletion(messages, options)) out += delta;
+  return out.trim();
 }
 
 /** Health check against the llama.cpp server. */
@@ -137,4 +167,4 @@ async function health() {
   }
 }
 
-module.exports = { chatCompletion, rawCompletion, streamChatCompletion, userMessage, health };
+module.exports = { chatCompletion, rawCompletion, streamChatCompletion, collectStream, userMessage, health };

@@ -19,7 +19,10 @@ const config = {
     baseUrl: (process.env.LLAMA_BASE_URL || 'http://localhost:8080').replace(/\/+$/, ''),
     model: process.env.LLAMA_MODEL || 'google/gemma-4-E4B-it-qat-q4_0-gguf:Q4_0',
     apiKey: process.env.LLAMA_API_KEY || '',
-    timeoutMs: parseInt(process.env.LLAMA_TIMEOUT_MS || '120000', 10),
+    // Inactivity timeout for streamed responses (reset on each token). Vision
+    // inference on CPU can take a while to produce the first token, so this is
+    // generous by default.
+    timeoutMs: parseInt(process.env.LLAMA_TIMEOUT_MS || '300000', 10),
   },
 
   auth: {
