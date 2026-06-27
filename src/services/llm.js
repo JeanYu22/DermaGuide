@@ -49,7 +49,8 @@ function userMessage(text, imageDataUrl) {
   };
 }
 
-async function chatCompletion(messages, options = {}) {
+/** Non-streaming request that returns the full parsed JSON response. */
+async function rawCompletion(messages, options = {}) {
   const body = {
     model: config.llama.model,
     messages,
@@ -67,7 +68,11 @@ async function chatCompletion(messages, options = {}) {
     throw new Error(`llama.cpp error ${res.status}: ${detail.slice(0, 300)}`);
   }
 
-  const data = await res.json();
+  return res.json();
+}
+
+async function chatCompletion(messages, options = {}) {
+  const data = await rawCompletion(messages, options);
   return data.choices?.[0]?.message?.content?.trim() || '';
 }
 
@@ -132,4 +137,4 @@ async function health() {
   }
 }
 
-module.exports = { chatCompletion, streamChatCompletion, userMessage, health };
+module.exports = { chatCompletion, rawCompletion, streamChatCompletion, userMessage, health };
