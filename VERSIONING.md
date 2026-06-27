@@ -1,0 +1,94 @@
+# Versioning & Rollback
+
+Each milestone is marked with an **annotated git tag** so you can always return
+to a known-good version if a new update misbehaves.
+
+## Release checkpoints
+
+| Tag | What it contains |
+| --- | --- |
+| `v1.0.0` | Stable storefront: working AI skin analysis, human-skin gate, feedback calibration, recommendations with reasons/how-to-use. **Last version before dropshipping.** |
+| `v1.1.0` | Adds the dropshipping supplier framework (AliExpress API + Spocket/BeautyJoint feed import). |
+
+List every checkpoint at any time:
+
+```bash
+git tag -l            # list tags
+git show v1.0.0       # see what a tag points to
+```
+
+## How to roll back
+
+### Option A — Try an old version without changing anything (safest)
+Check it out in "detached HEAD" mode, test it, then come back:
+
+```bash
+git checkout v1.0.0      # run the old version locally
+npm install && npm start
+# …test…
+git checkout claude/shop-app-commercialize-j0yc77   # return to latest
+```
+
+### Option B — Undo a bad update but KEEP history (recommended for shared work)
+`git revert` makes a NEW commit that undoes the change. Nothing is lost, and
+it's safe to push.
+
+```bash
+# undo just the dropshipping commit:
+git revert daad601
+git push
+
+# or undo everything since the last good tag:
+git revert --no-commit v1.0.0..HEAD
+git commit -m "Roll back to v1.0.0 behaviour"
+git push
+```
+
+### Option C — Hard reset the branch to a tag (rewrites history)
+Use only if you're sure and it's your own branch. This discards commits after
+the tag and requires a force-push.
+
+```bash
+git reset --hard v1.0.0
+git push --force-with-lease origin claude/shop-app-commercialize-j0yc77
+```
+
+> Prefer **Option B** on any branch others might use. Use **Option C** only on a
+> personal branch.
+
+## Tagging the next milestone
+
+When the next milestone is stable:
+
+```bash
+git tag -a v1.2.0 -m "Describe what this milestone adds"
+git push origin v1.2.0
+```
+
+Use semantic-ish versions: bump the **minor** (1.1 → 1.2) for new features, the
+**patch** (1.1.0 → 1.1.1) for fixes, the **major** (1.x → 2.0) for breaking
+changes.
+
+## Important: code rollback ≠ data rollback
+
+Git only versions **code**, not your MongoDB **data**. All schema changes so
+far are *additive* (new fields with defaults, new collections), so rolling the
+code back is safe — old code simply ignores the newer fields. But to be fully
+protected, **back up the database before each milestone**:
+
+```bash
+# Back up (creates ./backups/<timestamp>/dermaguide)
+mongodump --uri "mongodb://localhost:27017" --db dermaguide --out "backups/$(date +%Y%m%d-%H%M%S)"
+
+# Restore a backup
+mongorestore --uri "mongodb://localhost:27017" --drop "backups/<timestamp>/dermaguide"
+```
+
+On Windows PowerShell:
+
+```powershell
+$ts = Get-Date -Format "yyyyMMdd-HHmmss"
+mongodump --uri "mongodb://localhost:27017" --db dermaguide --out "backups/$ts"
+```
+
+`npm run db:backup` / `npm run db:restore` wrap these (see `package.json`).
