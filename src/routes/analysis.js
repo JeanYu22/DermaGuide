@@ -23,12 +23,27 @@ function toDataUrl(file) {
   return `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
 }
 
-/** Pick catalogue products that target the analysis's top concerns. */
+/**
+ * Pick catalogue products that target the analysis's top concerns, attaching a
+ * human-readable reason explaining each recommendation.
+ */
 function recommendFor(parsed, products) {
   const concernList = parsed.topConcerns.toLowerCase().split(',').map((c) => c.trim());
-  let recs = products.filter((p) => p.concerns.some((c) => concernList.some((cc) => cc.includes(c) || c.includes(cc))));
-  if (recs.length < 3) recs = products.slice(0, 3);
-  return recs.slice(0, 3);
+  const matches = (p) => p.concerns.filter((c) => concernList.some((cc) => cc.includes(c) || c.includes(cc)));
+
+  let recs = products.filter((p) => matches(p).length > 0);
+  if (recs.length < 3) {
+    const extra = products.filter((p) => !recs.includes(p));
+    recs = [...recs, ...extra];
+  }
+
+  return recs.slice(0, 3).map((p) => {
+    const matched = matches(p);
+    const reason = matched.length
+      ? `Targets your ${matched.slice(0, 2).join(' & ')}`
+      : `A good all-round pick for ${parsed.skinType || 'your'} skin`;
+    return { ...p, reason };
+  });
 }
 
 /**
@@ -98,7 +113,7 @@ router.post(
     }
 
     const products = (await Product.find({ active: true })).map((p) => p.toStorefront());
-    const recommended = recommendFor({ topConcerns }, products);
+    const recommended = recommendFor({ topConcerns, skinType: parsed.skinType }, products);
 
     // Optional ML cross-validation summary sent from the browser TF pass.
     // Coerce defensively — values may arrive as arrays/typed-arrays from
@@ -209,7 +224,7 @@ router.post(
     }).catch(() => {});
 
     const products = (await Product.find({ active: true })).map((p) => p.toStorefront());
-    const recommended = recommendFor({ topConcerns: record.topConcerns }, products);
+    const recommended = recommendFor({ topConcerns: record.topConcerns, skinType: record.skinType }, products);
 
     res.json({
       analysisId: record._id.toString(),

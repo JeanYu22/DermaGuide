@@ -20,6 +20,9 @@ const ProductSchema = new Schema(
     concerns: { type: [String], default: [] }, // dryness, acne, ...
     types: { type: [String], default: [] }, // dry, oily, sensitive, all
 
+    howToUse: { type: String, default: '' }, // brief application instructions
+    keyIngredients: { type: [String], default: [] },
+
     stock: { type: Number, default: 0, min: 0 },
     active: { type: Boolean, default: true },
 
@@ -49,6 +52,8 @@ ProductSchema.methods.toStorefront = function toStorefront() {
     certs: this.certs,
     concerns: this.concerns,
     types: this.types,
+    howToUse: this.howToUse,
+    keyIngredients: this.keyIngredients,
     inStock: this.stock > 0,
     rating: this.rating,
     reviewCount: this.reviewCount,

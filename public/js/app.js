@@ -151,6 +151,10 @@ function showProductModal(product) {
         <div style="font-size:5rem;text-align:center;margin:1rem 0;">${product.emoji}</div>
         <p style="font-size:1.1rem;margin-bottom:1rem;">${product.desc}</p>
         <div style="font-size:2rem;font-weight:700;color:var(--clay);margin-bottom:1.5rem;">$${product.price.toFixed(2)}</div>
+        ${product.reason ? `<div class="rec-reason" style="margin-bottom:1rem;">💡 <strong>Why for you:</strong> ${product.reason}</div>` : ''}
+        ${product.keyIngredients?.length ? `<h3 style="margin-bottom:.6rem;color:var(--forest);">Key Ingredients</h3>
+          <div style="display:flex;gap:.5rem;margin-bottom:1.2rem;flex-wrap:wrap;">${product.keyIngredients.map((i) => `<span class="cert-badge" style="background:var(--sand);color:var(--forest);">${i}</span>`).join('')}</div>` : ''}
+        ${product.howToUse ? `<h3 style="margin-bottom:.6rem;color:var(--forest);">How to Use</h3><p style="margin-bottom:1.2rem;line-height:1.6;">${product.howToUse}</p>` : ''}
         <h3 style="margin-bottom:.8rem;color:var(--forest);">Certifications</h3>
         <div style="display:flex;gap:.5rem;margin-bottom:1.5rem;flex-wrap:wrap;">
           ${product.certs.map((c) => `<span class="cert-badge ${c}">${c.toUpperCase()}</span>`).join('')}
@@ -534,7 +538,10 @@ async function handleChatImage(event) {
   const container = document.getElementById('chatMessages');
   const userMsg = document.createElement('div');
   userMsg.className = 'message user';
-  userMsg.innerHTML = '<div class="message-label">You</div><div class="message-bubble">📸 Uploaded a photo for skin analysis</div>';
+  const thumbUrl = URL.createObjectURL(file);
+  userMsg.innerHTML = `<div class="message-label">You</div><div class="message-bubble">
+    <img src="${thumbUrl}" alt="uploaded photo" style="display:block;max-width:170px;width:100%;border-radius:12px;margin-bottom:.5rem;">
+    📸 Uploaded a photo for skin analysis</div>`;
   container.appendChild(userMsg);
 
   // Pre-validate skin presence in-browser before hitting the model.
@@ -596,6 +603,21 @@ function recCarouselHTML(title, recs) {
   </div></div>`;
 }
 
+/** Detailed recommendations: reason + how-to-use beneath each product. */
+function recDetailHTML(title, recs) {
+  return `<div class="rec-products"><div class="rec-title">${title}</div>
+    ${recs.map((p) => `<div class="rec-detail" onclick='showProductModal(${JSON.stringify(p).replace(/'/g, "&#39;")})'>
+      <div class="rec-detail-head">
+        <div class="rec-emoji" style="margin:0;">${p.emoji}</div>
+        <div style="flex:1;"><div class="rec-name">${p.name}</div><div class="rec-price">$${p.price.toFixed(2)}</div></div>
+        <span style="font-size:.75rem;color:var(--sage);">Tap for details ›</span>
+      </div>
+      ${p.reason ? `<div class="rec-reason">💡 <strong>Why:</strong> ${p.reason}</div>` : ''}
+      ${p.howToUse ? `<div class="rec-howto">📋 <strong>How to use:</strong> ${p.howToUse}</div>` : ''}
+    </div>`).join('')}
+  </div>`;
+}
+
 function displayChatAnalysis(result, mlResults) {
   const { analysisId, bodyPart, skinType, metrics, topConcerns, recommendation, recommendedProducts } = result;
   const canvasId = 'canvas-' + analysisId;
@@ -622,7 +644,7 @@ function displayChatAnalysis(result, mlResults) {
       <div style="margin-top:1rem;color:var(--sage);font-size:.95rem;">💬 What would you like to know about treating these concerns?</div>
     </div>`;
   container.appendChild(div);
-  if (recommendedProducts?.length) container.appendChild(wrapMessage(recCarouselHTML(`Recommended for your ${bodyPart}:`, recommendedProducts)));
+  if (recommendedProducts?.length) container.appendChild(wrapMessage(recDetailHTML(`Recommended for your ${bodyPart}:`, recommendedProducts)));
   container.scrollTop = container.scrollHeight;
   setTimeout(() => drawRadarChart(canvasId, metrics, skinType, mlResults), 300);
 }
@@ -779,7 +801,7 @@ function displayStandaloneAnalysis(result, imgSrc, mlResults) {
       <div class="analysis-summary"><div class="summary-title">Professional Recommendation</div><div>${recommendation || '—'}</div></div>
       ${mlResults && mlResults.mlConcerns ? `<div class="ml-status-box"><div style="display:flex;align-items:center;gap:.5rem;font-size:.9rem;"><span>✅</span><span class="ml-status-title">ML Cross-Validation Active</span><span class="ml-confidence-badge">${Math.round((mlResults.confidence || 0) * 100)}% confidence</span></div></div>` : ''}
       ${feedbackSectionHTML(analysisId)}
-      ${recommendedProducts?.length ? recCarouselHTML(`Top products for your ${bodyPart}:`, recommendedProducts) : ''}
+      ${recommendedProducts?.length ? recDetailHTML(`Top products for your ${bodyPart}:`, recommendedProducts) : ''}
       <div style="margin-top:1.5rem;display:flex;gap:1rem;flex-wrap:wrap;">
         <button class="btn btn-primary" style="flex:1;min-width:140px;" onclick="retakePhoto()">📸 New Analysis</button>
         <button class="btn btn-primary" style="flex:1;min-width:140px;" onclick="chatAboutAnalysis()">💬 Chat with Lily</button>
