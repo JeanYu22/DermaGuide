@@ -49,15 +49,37 @@ function userMessage(text, imageDataUrl) {
   };
 }
 
-/** Non-streaming request that returns the full parsed JSON response. */
-async function rawCompletion(messages, options = {}) {
+/**
+ * Build the request body. Injects the "disable thinking" hint for reasoning
+ * models (this build emits chain-of-thought into reasoning_content, which
+ * otherwise eats the whole token budget before the real answer). Best-effort:
+ * harmless on models/templates that don't use these kwargs.
+ */
+function buildBody(messages, options = {}, stream = false) {
   const body = {
     model: config.llama.model,
     messages,
     temperature: options.temperature ?? 0.7,
     max_tokens: options.maxTokens ?? 768,
-    stream: false,
+    stream,
   };
+  if (config.llama.disableThinking) {
+    body.chat_template_kwargs = { enable_thinking: false };
+    body.reasoning_format = 'none';
+  }
+  if (options.extraBody) Object.assign(body, options.extraBody);
+  return body;
+}
+
+/** Extract assistant text, falling back to reasoning_content for reasoning models. */
+function messageText(data) {
+  const msg = data?.choices?.[0]?.message || {};
+  return (msg.content || msg.reasoning_content || '').trim();
+}
+
+/** Non-streaming request that returns the full parsed JSON response. */
+async function rawCompletion(messages, options = {}) {
+  const body = buildBody(messages, options, false);
 
   const res = await withTimeout((signal) =>
     fetch(endpoint(), { method: 'POST', headers: authHeaders(), body: JSON.stringify(body), signal })
@@ -73,7 +95,7 @@ async function rawCompletion(messages, options = {}) {
 
 async function chatCompletion(messages, options = {}) {
   const data = await rawCompletion(messages, options);
-  return data.choices?.[0]?.message?.content?.trim() || '';
+  return messageText(data);
 }
 
 /**
@@ -86,13 +108,7 @@ async function chatCompletion(messages, options = {}) {
  * generation mid-stream.
  */
 async function* streamChatCompletion(messages, options = {}) {
-  const body = {
-    model: config.llama.model,
-    messages,
-    temperature: options.temperature ?? 0.7,
-    max_tokens: options.maxTokens ?? 768,
-    stream: true,
-  };
+  const body = buildBody(messages, options, true);
 
   const inactivityMs = options.inactivityMs ?? config.llama.timeoutMs;
   const controller = new AbortController();
@@ -136,7 +152,10 @@ async function* streamChatCompletion(messages, options = {}) {
         if (payload === '[DONE]') return;
         try {
           const json = JSON.parse(payload);
-          const delta = json.choices?.[0]?.delta?.content;
+          // Prefer real content; fall back to reasoning_content so chat never
+          // goes blank on a build that ignores the disable-thinking hint.
+          const d = json.choices?.[0]?.delta || {};
+          const delta = d.content || d.reasoning_content;
           if (delta) yield delta;
         } catch (_) {
           // Ignore keep-alive / partial frames.
@@ -167,4 +186,4 @@ async function health() {
   }
 }
 
-module.exports = { chatCompletion, rawCompletion, streamChatCompletion, collectStream, userMessage, health };
+module.exports = { chatCompletion, rawCompletion, streamChatCompletion, collectStream, userMessage, messageText, health };

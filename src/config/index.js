@@ -23,6 +23,11 @@ const config = {
     // inference on CPU can take a while to produce the first token, so this is
     // generous by default.
     timeoutMs: parseInt(process.env.LLAMA_TIMEOUT_MS || '300000', 10),
+    // This model is a reasoning model that emits chain-of-thought into
+    // reasoning_content; disabling it makes agents answer directly (faster,
+    // and content isn't starved of tokens). Set LLAMA_DISABLE_THINKING=false
+    // to allow thinking.
+    disableThinking: (process.env.LLAMA_DISABLE_THINKING || 'true').toLowerCase() !== 'false',
   },
 
   auth: {

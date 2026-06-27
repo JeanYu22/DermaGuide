@@ -35,16 +35,18 @@ async function analyze(imageDataUrl, extraInstruction = '') {
   const text = extraInstruction ? `${ANALYSIS_PROMPT}\n\n${extraInstruction}` : ANALYSIS_PROMPT;
   const messages = [llm.userMessage(text, imageDataUrl)];
 
-  // Stream so slow CPU vision inference isn't killed by a total-duration cap;
-  // the inactivity timeout only fires if the model goes silent.
+  // Thinking is disabled globally for this reasoning model, so the answer lands
+  // in content directly. Generous token budget + reasoning_content fallback in
+  // case a build ignores the hint and still thinks.
   const started = Date.now();
-  const raw = await llm.collectStream(messages, { temperature: 0.2, maxTokens: 512 });
+  const data = await llm.rawCompletion(messages, { temperature: 0.2, maxTokens: 1024 });
+  const raw = llm.messageText(data);
   const secs = ((Date.now() - started) / 1000).toFixed(1);
 
   if (raw) {
     console.log(`🔬 analyzer output in ${secs}s:\n` + raw.slice(0, 800));
   } else {
-    console.warn(`🔬 analyzer EMPTY response after ${secs}s (model produced no tokens).`);
+    console.warn(`🔬 analyzer EMPTY response after ${secs}s. finish_reason=` + (data.choices?.[0]?.finish_reason || '?'));
   }
   return raw;
 }

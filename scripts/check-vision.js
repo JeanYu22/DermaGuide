@@ -15,7 +15,8 @@ const llm = require('../src/services/llm');
 const analyzer = require('../src/services/agents/analyzer');
 
 function content(data) {
-  return data?.choices?.[0]?.message?.content?.trim() || '';
+  // Reasoning-aware: fall back to reasoning_content like the real client does.
+  return llm.messageText(data);
 }
 function finish(data) {
   return data?.choices?.[0]?.finish_reason || '(none)';
@@ -70,7 +71,7 @@ function finish(data) {
   let visionData;
   try {
     visionData = await llm.rawCompletion([llm.userMessage(analyzer.ANALYSIS_PROMPT, dataUrl)], {
-      maxTokens: 256,
+      maxTokens: 1024,
       temperature: 0.4,
     });
   } catch (err) {
