@@ -1,0 +1,54 @@
+# ---------------------------------------------------------------------------
+# DermaGuide local stack: MongoDB + llama.cpp + the app.
+#
+#   docker compose up -d mongo llama   # start dependencies
+#   npm install && npm run seed && npm start
+#
+# The llama.cpp service expects a GGUF model + multimodal projector mounted
+# into ./models. Adjust the model file names to match what you downloaded for
+# google/gemma-4-E4B-it-qat-q4_0-gguf:Q4_0.
+# ---------------------------------------------------------------------------
+services:
+  mongo:
+    image: mongo:7
+    container_name: dermaguide-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+
+  llama:
+    image: ghcr.io/ggerganov/llama.cpp:server
+    container_name: dermaguide-llama
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./models:/models
+    # The E4B Gemma build is multimodal; pass --mmproj for the vision projector
+    # so the skin-analysis agent can read uploaded photos.
+    command: >
+      -m /models/gemma-4-E4B-it-qat-Q4_0.gguf
+      --mmproj /models/gemma-4-E4B-mmproj.gguf
+      --alias google/gemma-4-E4B-it-qat-q4_0-gguf:Q4_0
+      --host 0.0.0.0 --port 8080
+      -c 8192
+
+  app:
+    build: .
+    container_name: dermaguide-app
+    restart: unless-stopped
+    depends_on:
+      - mongo
+      - llama
+    ports:
+      - "3000:3000"
+    environment:
+      - MONGODB_URI=mongodb://mongo:27017
+      - LLAMA_BASE_URL=http://llama:8080
+    env_file:
+      - .env
+
+volumes:
+  mongo-data:
