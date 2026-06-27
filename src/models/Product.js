@@ -29,14 +29,28 @@ const ProductSchema = new Schema(
     rating: { type: Number, default: 0, min: 0, max: 5 },
     reviewCount: { type: Number, default: 0 },
 
+    images: { type: [String], default: [] }, // remote image URLs (dropship)
+    brand: { type: String, default: '' },
+
+    // Dropshipping source. `source` is the supplier key (manual/aliexpress/
+    // spocket/beautyjoint); dropship items are fulfilled by the supplier.
+    source: { type: String, default: 'manual', index: true },
+    dropship: { type: Boolean, default: false },
+    externalId: { type: String, default: '' }, // supplier's product id
+    externalUrl: { type: String, default: '' }, // supplier product page
+
     // Internal-only fields (never sent to storefront)
     expiryDate: { type: String, default: '' },
     supplier: { type: String, default: '' },
     supplierContact: { type: String, default: '' },
+    supplierPrice: { type: Number, default: 0 }, // supplier cost (USD)
     cost: { type: Number, default: 0 },
   },
   { timestamps: true }
 );
+
+// One product per supplier item.
+ProductSchema.index({ source: 1, externalId: 1 }, { unique: true, partialFilterExpression: { externalId: { $type: 'string', $ne: '' } } });
 
 ProductSchema.index({ name: 'text', desc: 'text', concerns: 'text' });
 
@@ -54,6 +68,8 @@ ProductSchema.methods.toStorefront = function toStorefront() {
     types: this.types,
     howToUse: this.howToUse,
     keyIngredients: this.keyIngredients,
+    images: this.images,
+    brand: this.brand,
     inStock: this.stock > 0,
     rating: this.rating,
     reviewCount: this.reviewCount,

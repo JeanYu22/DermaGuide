@@ -111,6 +111,54 @@ router.get(
   })
 );
 
+/** GET /api/admin/suppliers — list dropshipping suppliers + adapter status. */
+router.get(
+  '/suppliers',
+  asyncHandler(async (_req, res) => {
+    const Supplier = require('../models/Supplier');
+    const aliexpress = require('../services/suppliers/aliexpress');
+    const suppliers = await Supplier.find().sort({ name: 1 });
+    const counts = await Product.aggregate([{ $match: { dropship: true } }, { $group: { _id: '$source', n: { $sum: 1 } } }]);
+    const countMap = Object.fromEntries(counts.map((c) => [c._id, c.n]));
+    res.json({
+      suppliers: suppliers.map((s) => ({
+        key: s.key, name: s.name, type: s.type, enabled: s.enabled,
+        markup: s.markup, maxProducts: s.maxProducts, config: s.config,
+        lastSyncAt: s.lastSyncAt, lastResult: s.lastResult,
+        productCount: countMap[s.key] || 0,
+        ready: s.type === 'feed' ? Boolean(s.config?.feedUrl || s.config?.feedContent) : aliexpress.configured(),
+      })),
+    });
+  })
+);
+
+/** PUT /api/admin/suppliers/:key — update supplier config (markup, feedUrl, enabled, …). */
+router.put(
+  '/suppliers/:key',
+  asyncHandler(async (req, res) => {
+    const Supplier = require('../models/Supplier');
+    const allowed = (({ enabled, markup, currencyRate, maxProducts, categoryKeywords, config, name }) =>
+      ({ enabled, markup, currencyRate, maxProducts, categoryKeywords, config, name }))(req.body || {});
+    Object.keys(allowed).forEach((k) => allowed[k] === undefined && delete allowed[k]);
+    const supplier = await Supplier.findOneAndUpdate({ key: req.params.key }, allowed, { new: true });
+    if (!supplier) return res.status(404).json({ error: 'Supplier not found' });
+    res.json({ supplier });
+  })
+);
+
+/** POST /api/admin/suppliers/:key/sync — pull the supplier's catalogue now. */
+router.post(
+  '/suppliers/:key/sync',
+  asyncHandler(async (req, res) => {
+    const Supplier = require('../models/Supplier');
+    const { syncSupplier } = require('../services/suppliers');
+    const supplier = await Supplier.findOne({ key: req.params.key });
+    if (!supplier) return res.status(404).json({ error: 'Supplier not found' });
+    const result = await syncSupplier(supplier);
+    res.json({ result });
+  })
+);
+
 /** GET /api/admin/calibration — learned human-feedback calibration state. */
 router.get(
   '/calibration',

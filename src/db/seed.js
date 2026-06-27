@@ -3,7 +3,32 @@
 const { connect, disconnect } = require('./connection');
 const Product = require('../models/Product');
 const User = require('../models/User');
+const Supplier = require('../models/Supplier');
 const config = require('../config');
+
+/** Default dropshipping supplier configs (disabled until configured). */
+const SUPPLIERS = [
+  {
+    key: 'aliexpress', name: 'AliExpress Dropshipping', type: 'api', enabled: false, markup: 2.5,
+    config: { searchKeywords: ['face serum', 'moisturizer', 'facial cleanser', 'acne treatment', 'vitamin c serum'], shipTo: 'US' },
+  },
+  {
+    key: 'spocket', name: 'Spocket', type: 'feed', enabled: false, markup: 2.2,
+    config: {
+      feedUrl: '',
+      format: 'csv',
+      mapping: { externalId: 'id', title: 'title', description: 'description', price: 'price', image: 'image', url: 'url', brand: 'brand', stock: 'inventory' },
+    },
+  },
+  {
+    key: 'beautyjoint', name: 'BeautyJoint', type: 'feed', enabled: false, markup: 2.0,
+    config: {
+      feedUrl: '',
+      format: 'csv',
+      mapping: { externalId: 'sku', title: 'name', description: 'description', price: 'wholesale_price', image: 'image_url', url: 'product_url', brand: 'brand', stock: 'qty' },
+    },
+  },
+];
 
 /** The original PureGlow catalogue, mapped to the commerce Product schema. */
 const PRODUCTS = [
@@ -58,6 +83,12 @@ async function seed() {
     await Product.updateOne({ sku: p.sku }, { $set: p }, { upsert: true });
   }
   console.log(`✅ Seeded ${PRODUCTS.length} products`);
+
+  // Seed supplier configs WITHOUT clobbering any settings the admin has saved.
+  for (const s of SUPPLIERS) {
+    await Supplier.updateOne({ key: s.key }, { $setOnInsert: s }, { upsert: true });
+  }
+  console.log(`✅ Seeded ${SUPPLIERS.length} dropshipping suppliers (disabled until configured)`);
 
   // Bootstrap an admin account.
   const existingAdmin = await User.findOne({ email: config.admin.email.toLowerCase() });

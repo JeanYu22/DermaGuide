@@ -829,7 +829,7 @@ function chatAboutAnalysis() {
 // ===========================================================================
 // Admin dashboard
 // ===========================================================================
-const ADMIN_TABS = ['Overview', 'Products', 'Orders', 'Analyses', 'Calibration', 'Feedback', 'Security'];
+const ADMIN_TABS = ['Overview', 'Products', 'Suppliers', 'Orders', 'Analyses', 'Calibration', 'Feedback', 'Security'];
 let adminActiveTab = 'Overview';
 
 function openAdmin() {
@@ -843,7 +843,7 @@ function closeAdmin() { document.getElementById('adminView').classList.remove('a
 function adminSwitch(tab) {
   adminActiveTab = tab;
   document.querySelectorAll('.admin-tab').forEach((b) => b.classList.toggle('active', b.textContent === tab));
-  const fns = { Overview: adminOverview, Products: adminProducts, Orders: adminOrders, Analyses: adminAnalyses, Calibration: adminCalibration, Feedback: adminFeedback, Security: adminSecurity };
+  const fns = { Overview: adminOverview, Products: adminProducts, Suppliers: adminSuppliers, Orders: adminOrders, Analyses: adminAnalyses, Calibration: adminCalibration, Feedback: adminFeedback, Security: adminSecurity };
   document.getElementById('adminContent').innerHTML = '<div class="empty-state">Loading…</div>';
   fns[tab]();
 }
@@ -932,6 +932,56 @@ async function adminFeedback() {
     ${feedback.map((f) => `<tr><td>${f.rating}</td><td>${f.comment || '—'}</td><td>${new Date(f.createdAt).toLocaleDateString()}</td></tr>`).join('') || '<tr><td colspan="3">None</td></tr>'}
   </tbody></table>`;
 }
+async function adminSuppliers() {
+  const { suppliers } = await api('/admin/suppliers');
+  document.getElementById('adminContent').innerHTML = `
+    <p style="font-size:.82rem;opacity:.7;margin-bottom:1rem;">Dropshipping sources. Imported items appear in the storefront as platform stock (priced at supplier cost × markup). AliExpress uses its API (set credentials in .env); Spocket & BeautyJoint import from a CSV/JSON product feed URL.</p>
+    ${suppliers.map((s) => `
+      <div style="background:var(--white);border:1px solid var(--sand);border-radius:12px;padding:1rem;margin-bottom:1rem;">
+        <div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;">
+          <strong style="font-size:1.05rem;color:var(--forest);">${s.name}</strong>
+          <span class="cert-badge" style="background:var(--sand);color:var(--forest);">${s.type.toUpperCase()}</span>
+          <span class="cert-badge" style="background:${s.enabled ? '#66BB6A' : '#bbb'};color:#fff;">${s.enabled ? 'ENABLED' : 'DISABLED'}</span>
+          <span class="cert-badge" style="background:${s.ready ? '#42A5F5' : '#FFA726'};color:#fff;">${s.ready ? 'READY' : 'NEEDS CONFIG'}</span>
+          <span style="margin-left:auto;font-size:.85rem;opacity:.75;">${s.productCount} products imported</span>
+        </div>
+        <div style="display:flex;gap:.6rem;flex-wrap:wrap;margin-top:.8rem;align-items:flex-end;">
+          ${s.type === 'feed' ? `<div style="flex:1;min-width:240px;"><label class="form-label">CSV / JSON feed URL</label><input class="form-input" id="feed-${s.key}" value="${s.config?.feedUrl || ''}" placeholder="https://…/export.csv"></div>` : `<div style="flex:1;min-width:240px;font-size:.82rem;opacity:.7;">API credentials are read from .env (ALIEXPRESS_APP_KEY / _SECRET / _ACCESS_TOKEN).</div>`}
+          <div style="width:90px;"><label class="form-label">Markup ×</label><input class="form-input" id="markup-${s.key}" type="number" step="0.1" value="${s.markup}"></div>
+          <div style="width:90px;"><label class="form-label">Max</label><input class="form-input" id="max-${s.key}" type="number" value="${s.maxProducts}"></div>
+        </div>
+        <div style="display:flex;gap:.6rem;margin-top:.8rem;flex-wrap:wrap;">
+          <button class="admin-small-btn edit" onclick="saveSupplier('${s.key}', ${!s.enabled})">${s.enabled ? 'Disable' : 'Enable'}</button>
+          <button class="admin-small-btn edit" onclick="saveSupplier('${s.key}', ${s.enabled})">Save config</button>
+          <button class="admin-small-btn" style="background:var(--forest);color:#fff;" onclick="syncSupplier('${s.key}', this)">⟳ Sync now</button>
+        </div>
+        ${s.lastSyncAt ? `<div style="font-size:.75rem;opacity:.6;margin-top:.6rem;">Last sync ${new Date(s.lastSyncAt).toLocaleString()} — ${s.lastResult?.error ? '⚠️ ' + s.lastResult.error : `imported ${s.lastResult?.imported || 0}, updated ${s.lastResult?.updated || 0}, skipped ${s.lastResult?.skipped || 0}`}</div>` : ''}
+      </div>`).join('')}`;
+}
+
+async function saveSupplier(key, enabled) {
+  const feedEl = document.getElementById('feed-' + key);
+  const body = {
+    enabled,
+    markup: parseFloat(document.getElementById('markup-' + key).value) || 2,
+    maxProducts: parseInt(document.getElementById('max-' + key).value, 10) || 50,
+  };
+  if (feedEl) body.config = { feedUrl: feedEl.value.trim() };
+  try { await api(`/admin/suppliers/${key}`, { method: 'PUT', body }); toast('Supplier saved'); adminSuppliers(); }
+  catch (err) { toast(err.message); }
+}
+
+async function syncSupplier(key, btn) {
+  btn.disabled = true; btn.textContent = 'Syncing…';
+  try {
+    const { result } = await api(`/admin/suppliers/${key}/sync`, { method: 'POST' });
+    if (result.error) toast('Sync error: ' + result.error);
+    else toast(`Synced: +${result.imported} new, ${result.updated} updated`);
+    adminSuppliers();
+    loadProducts();
+  } catch (err) { toast(err.message); btn.disabled = false; btn.textContent = '⟳ Sync now'; }
+}
+
 async function adminCalibration() {
   const c = await api('/admin/calibration');
   document.getElementById('adminContent').innerHTML = `

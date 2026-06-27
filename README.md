@@ -69,6 +69,30 @@ systematic bias from real users**:
   offset. Raw model scores are kept (`Analysis.modelMetrics`) so corrections
   always measure the model's true bias.
 
+### Dropshipping suppliers
+
+Products can be sourced from external dropshipping suppliers and shown in the
+storefront as platform stock (priced at `supplierPrice × markup`, flagged
+`dropship: true`). A supplier-adapter framework normalises every source into
+the `Product` schema, inferring skincare concerns from titles and filtering out
+non-skincare items.
+
+| Supplier | Reality | Adapter |
+| --- | --- | --- |
+| **AliExpress Dropshipping** | Real API (Alibaba Open Platform DS API) | `suppliers/aliexpress.js` — signed calls; needs `ALIEXPRESS_APP_KEY/_SECRET/_ACCESS_TOKEN` |
+| **Spocket** | No public API (integrates via Shopify); use its export | `suppliers/feed.js` — CSV/JSON feed URL |
+| **BeautyJoint** | No developer API; wholesale data feed | `suppliers/feed.js` — CSV/JSON feed URL |
+
+Configure and sync from **admin → Suppliers**: set a feed URL (Spocket/
+BeautyJoint) or provide AliExpress credentials in `.env`, set the markup,
+enable, and click **Sync now**. Re-syncing refreshes price/stock/images while
+keeping manual edits. `src/services/suppliers/index.js` orchestrates the sync;
+`normalize.js` maps raw items → products.
+
+> Only AliExpress exposes a usable public dropshipping API. Spocket and
+> BeautyJoint are integrated via their product feeds/exports (CSV or JSON),
+> which is the realistic path for a custom platform.
+
 ### Human-skin gate
 
 Before scoring, the analyzer agent decides `IS_HUMAN_SKIN: yes/no`. Non-skin

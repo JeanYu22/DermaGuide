@@ -39,6 +39,14 @@ const config = {
     email: process.env.ADMIN_EMAIL || 'admin@pureglow.shop',
     password: process.env.ADMIN_PASSWORD || 'ChangeMe123!',
   },
+
+  // AliExpress Dropshipping (Alibaba Open Platform) credentials.
+  aliexpress: {
+    appKey: process.env.ALIEXPRESS_APP_KEY || '',
+    appSecret: process.env.ALIEXPRESS_APP_SECRET || '',
+    accessToken: process.env.ALIEXPRESS_ACCESS_TOKEN || '', // OAuth session token
+    gateway: process.env.ALIEXPRESS_GATEWAY || 'https://api-sg.aliexpress.com/sync',
+  },
 };
 
 module.exports = config;
