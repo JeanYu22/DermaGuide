@@ -1,6 +1,6 @@
 {
   "name": "dermaguide",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Trust-First, AI-Powered Personal Skincare Consultant and Commerce Engine (PureGlow).",
   "main": "src/server.js",
   "scripts": {
