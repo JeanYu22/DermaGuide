@@ -137,11 +137,19 @@ router.put(
   '/suppliers/:key',
   asyncHandler(async (req, res) => {
     const Supplier = require('../models/Supplier');
-    const allowed = (({ enabled, markup, currencyRate, maxProducts, categoryKeywords, config, name }) =>
-      ({ enabled, markup, currencyRate, maxProducts, categoryKeywords, config, name }))(req.body || {});
-    Object.keys(allowed).forEach((k) => allowed[k] === undefined && delete allowed[k]);
-    const supplier = await Supplier.findOneAndUpdate({ key: req.params.key }, allowed, { new: true });
+    const supplier = await Supplier.findOne({ key: req.params.key });
     if (!supplier) return res.status(404).json({ error: 'Supplier not found' });
+
+    const body = req.body || {};
+    for (const field of ['enabled', 'markup', 'currencyRate', 'maxProducts', 'categoryKeywords', 'name']) {
+      if (body[field] !== undefined) supplier[field] = body[field];
+    }
+    // MERGE config (don't clobber seeded mapping/format/etc. with a partial update).
+    if (body.config && typeof body.config === 'object') {
+      supplier.config = { ...(supplier.config || {}), ...body.config };
+      supplier.markModified('config');
+    }
+    await supplier.save();
     res.json({ supplier });
   })
 );
