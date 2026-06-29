@@ -105,30 +105,45 @@ function normalize(p) {
     images,
     url: p.product_detail_url ?? p.promotion_link ?? '',
     brand: p.brand_name || '',
+    // Ship-from country + MOQ when the API exposes them (used by the criteria
+    // filter for "EU origin" and "MOQ 1"). AliExpress retail MOQ is 1.
+    shipFrom: p.ship_to_country ?? p.shipFromCountry ?? p.ship_from ?? '',
+    moq: p.min_order_quantity != null ? Number(p.min_order_quantity) : 1,
     available: true,
     raw: p,
   };
 }
 
-/** Search AliExpress for skincare items using the supplier's keywords. */
+/**
+ * Search AliExpress for skincare items using the supplier's keywords and
+ * sourcing criteria (price range, ship-from, currency, sort). Price params are
+ * sent to the API best-effort; the sync also post-filters to guarantee the
+ * range regardless of whether the API honoured it.
+ */
 async function fetchProducts(supplier) {
   const cfg = supplier.config || {};
   const method = cfg.searchMethod || 'aliexpress.ds.text.search';
-  const keywords = (cfg.searchKeywords && cfg.searchKeywords.length ? cfg.searchKeywords : ['face serum', 'moisturizer', 'cleanser', 'acne treatment']);
+  const keywords = (cfg.searchKeywords && cfg.searchKeywords.length ? cfg.searchKeywords : ['organic skincare', 'natural face cream', 'vegan serum']);
   const pageSize = Math.min(50, supplier.maxProducts || 50);
+  const currency = cfg.currency || 'USD';
 
   const all = [];
   for (const kw of keywords) {
-    const data = await call(method, {
+    const params = {
       keyWord: kw,
-      keywords: kw, // some versions use `keywords`
+      keywords: kw, // some API versions use `keywords`
       local: 'en_US',
-      countryCode: cfg.shipTo || 'US',
-      currency: 'USD',
+      countryCode: cfg.shipTo || 'DE',
+      currency,
       pageSize,
       pageIndex: 1,
+      sort: cfg.sort || 'orders_desc', // "hot selling" first
+      ...(cfg.priceMin != null ? { minSalePrice: cfg.priceMin, min_sale_price: cfg.priceMin } : {}),
+      ...(cfg.priceMax != null ? { maxSalePrice: cfg.priceMax, max_sale_price: cfg.priceMax } : {}),
+      ...(Array.isArray(cfg.shipFrom) && cfg.shipFrom.length ? { shipFromCountry: cfg.shipFrom[0] } : {}),
       ...(cfg.searchParams || {}),
-    });
+    };
+    const data = await call(method, params);
     for (const p of extractProducts(data)) all.push(normalize(p));
     if (all.length >= (supplier.maxProducts || 50)) break;
   }

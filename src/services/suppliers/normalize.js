@@ -62,6 +62,24 @@ function isRelevant(item, categoryKeywords) {
   return categoryKeywords.some((k) => hay.includes(k.toLowerCase()));
 }
 
+/**
+ * Sourcing criteria filter. Drops items that fall outside the supplier's
+ * configured price range / ship-from countries / MOQ. Only filters on data the
+ * item actually carries (so a missing field never wrongly excludes an item).
+ */
+function passesCriteria(item, config = {}) {
+  const price = Number(item.price);
+  if (config.priceMin != null && price < config.priceMin) return false;
+  if (config.priceMax != null && price > config.priceMax) return false;
+
+  if (Array.isArray(config.shipFrom) && config.shipFrom.length && item.shipFrom) {
+    const cc = String(item.shipFrom).toUpperCase();
+    if (!config.shipFrom.map((c) => c.toUpperCase()).includes(cc)) return false;
+  }
+  if (config.moq != null && item.moq != null && Number(item.moq) > config.moq) return false;
+  return true;
+}
+
 /** Map a normalized item → Product upsert document. */
 function toProduct(item, supplier) {
   const text = `${item.title || ''} ${item.description || ''}`;
@@ -93,4 +111,4 @@ function toProduct(item, supplier) {
   };
 }
 
-module.exports = { toProduct, inferConcerns, inferTypes, retailPrice, isRelevant };
+module.exports = { toProduct, inferConcerns, inferTypes, retailPrice, isRelevant, passesCriteria };

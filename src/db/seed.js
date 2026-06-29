@@ -10,7 +10,18 @@ const config = require('../config');
 const SUPPLIERS = [
   {
     key: 'aliexpress', name: 'AliExpress Dropshipping', type: 'api', enabled: false, markup: 2.5,
-    config: { searchKeywords: ['face serum', 'moisturizer', 'facial cleanser', 'acne treatment', 'vitamin c serum'], shipTo: 'US' },
+    currencyRate: 1.08, // EUR → USD for stored cost
+    config: {
+      searchKeywords: ['organic skincare', 'certified organic face cream', 'natural vegan serum', 'organic moisturizer', 'EU organic skincare'],
+      currency: 'EUR',
+      priceMin: 1,
+      priceMax: 10,
+      moq: 1,
+      sort: 'orders_desc', // hot-selling first
+      // Ship-from EU member states (applied when the API returns origin data).
+      shipFrom: ['ES', 'FR', 'DE', 'IT', 'PL', 'NL', 'BE', 'PT', 'AT', 'SE', 'DK', 'FI', 'IE', 'CZ', 'GR', 'RO', 'HU'],
+      shipTo: 'DE',
+    },
   },
   {
     key: 'spocket', name: 'Spocket', type: 'feed', enabled: false, markup: 2.2,

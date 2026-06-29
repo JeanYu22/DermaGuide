@@ -23,8 +23,11 @@ async function syncSupplier(supplier) {
     const adapter = adapterFor(supplier);
     let items = await adapter.fetchProducts(supplier);
 
+    // Skincare relevance + sourcing criteria (price range / ship-from / MOQ).
     items = items.filter((it) => normalize.isRelevant(it, supplier.categoryKeywords));
+    items = items.filter((it) => normalize.passesCriteria(it, supplier.config || {}));
     items = items.slice(0, supplier.maxProducts || 50);
+    result.matched = items.length;
 
     for (const item of items) {
       if (!item.externalId || !item.price) { result.skipped += 1; continue; }

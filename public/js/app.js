@@ -1120,10 +1120,15 @@ async function adminSuppliers() {
           <span style="margin-left:auto;font-size:.85rem;opacity:.75;">${s.productCount} products imported</span>
         </div>
         <div style="display:flex;gap:.6rem;flex-wrap:wrap;margin-top:.8rem;align-items:flex-end;">
-          ${s.type === 'feed' ? `<div style="flex:1;min-width:240px;"><label class="form-label">CSV / JSON feed URL</label><input class="form-input" id="feed-${s.key}" value="${s.config?.feedUrl || ''}" placeholder="https://…/export.csv"></div>` : `<div style="flex:1;min-width:240px;font-size:.82rem;opacity:.7;">API credentials are read from .env (ALIEXPRESS_APP_KEY / _SECRET / _ACCESS_TOKEN).</div>`}
           <div style="width:90px;"><label class="form-label">Markup ×</label><input class="form-input" id="markup-${s.key}" type="number" step="0.1" value="${s.markup}"></div>
           <div style="width:90px;"><label class="form-label">Max</label><input class="form-input" id="max-${s.key}" type="number" value="${s.maxProducts}"></div>
+          ${s.type === 'feed' ? `<div style="flex:1;min-width:240px;"><label class="form-label">CSV / JSON feed URL</label><input class="form-input" id="feed-${s.key}" value="${s.config?.feedUrl || ''}" placeholder="https://…/export.csv"></div>` : ''}
         </div>
+        ${s.type === 'api' ? `<div style="margin-top:.8rem;">
+          <label class="form-label">Sourcing criteria (JSON) — keywords, currency, priceMin/Max, moq, shipFrom, sort</label>
+          <textarea class="form-input" id="cfg-${s.key}" style="min-height:120px;font-family:monospace;font-size:.78rem;">${JSON.stringify(s.config || {}, null, 2)}</textarea>
+          <div style="font-size:.72rem;opacity:.6;margin-top:.3rem;">API credentials (ALIEXPRESS_APP_KEY / _SECRET / _ACCESS_TOKEN) come from .env, not here.</div>
+        </div>` : ''}
         <div style="display:flex;gap:.6rem;margin-top:.8rem;flex-wrap:wrap;">
           <button class="admin-small-btn edit" onclick="saveSupplier('${s.key}', ${!s.enabled})">${s.enabled ? 'Disable' : 'Enable'}</button>
           <button class="admin-small-btn edit" onclick="saveSupplier('${s.key}', ${s.enabled})">Save config</button>
@@ -1135,12 +1140,17 @@ async function adminSuppliers() {
 
 async function saveSupplier(key, enabled) {
   const feedEl = document.getElementById('feed-' + key);
+  const cfgEl = document.getElementById('cfg-' + key);
   const body = {
     enabled,
     markup: parseFloat(document.getElementById('markup-' + key).value) || 2,
     maxProducts: parseInt(document.getElementById('max-' + key).value, 10) || 50,
   };
   if (feedEl) body.config = { feedUrl: feedEl.value.trim() };
+  if (cfgEl) {
+    try { body.config = JSON.parse(cfgEl.value); }
+    catch (_) { toast('Sourcing criteria is not valid JSON'); return; }
+  }
   try { await api(`/admin/suppliers/${key}`, { method: 'PUT', body }); toast('Supplier saved'); adminSuppliers(); }
   catch (err) { toast(err.message); }
 }
