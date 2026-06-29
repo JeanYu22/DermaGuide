@@ -7,6 +7,7 @@
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
     "seed": "node src/db/seed.js",
+    "seed:demo": "node scripts/seed-demo.js",
     "make-admin": "node scripts/make-admin.js",
     "db:info": "node scripts/db-info.js",
     "db:backup": "node scripts/db-backup.js",

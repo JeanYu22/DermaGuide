@@ -138,6 +138,10 @@ cp .env.example .env        # then edit secrets / hosts as needed
 # 3. Seed the product catalogue + bootstrap an admin user
 npm run seed
 
+# 3b. (optional) Add a realistic EU organic-skincare demo catalogue (~27 items)
+npm run seed:demo            # add demo products
+# npm run seed:demo -- --clear   # remove them later
+
 # 4. (optional) Verify the model connection
 npm run test:llm
 
