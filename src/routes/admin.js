@@ -1,17 +1,67 @@
 'use strict';
 
 const express = require('express');
+const path = require('path');
+const fs = require('fs');
+const crypto = require('crypto');
+const multer = require('multer');
 const Product = require('../models/Product');
 const Order = require('../models/Order');
 const Analysis = require('../models/Analysis');
 const Feedback = require('../models/Feedback');
 const SecurityLog = require('../models/SecurityLog');
 const User = require('../models/User');
+const productExtractor = require('../services/agents/productExtractor');
 const { requireAdmin } = require('../middleware/auth');
 const { asyncHandler } = require('../middleware/errorHandler');
 
 const router = express.Router();
 router.use(requireAdmin);
+
+// Product images are stored on disk under public/uploads/products and served
+// statically at /uploads/products/<file>.
+const UPLOAD_DIR = path.join(__dirname, '..', '..', 'public', 'uploads', 'products');
+fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+
+const diskUpload = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, UPLOAD_DIR),
+    filename: (_req, file, cb) => {
+      const ext = (path.extname(file.originalname) || '.jpg').toLowerCase().replace(/[^.a-z0-9]/g, '');
+      cb(null, `${Date.now()}-${crypto.randomBytes(4).toString('hex')}${ext || '.jpg'}`);
+    },
+  }),
+  limits: { fileSize: 12 * 1024 * 1024, files: 10 },
+  fileFilter: (_req, file, cb) => cb(null, file.mimetype.startsWith('image/')),
+});
+
+const memUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 12 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => cb(null, file.mimetype.startsWith('image/')),
+});
+
+/** POST /api/admin/uploads — store product images, return their URLs. */
+router.post(
+  '/uploads',
+  diskUpload.array('images', 10),
+  asyncHandler(async (req, res) => {
+    const urls = (req.files || []).map((f) => `/uploads/products/${f.filename}`);
+    res.status(201).json({ urls });
+  })
+);
+
+/** POST /api/admin/extract — read product info from an image (AI autofill). */
+router.post(
+  '/extract',
+  memUpload.single('image'),
+  asyncHandler(async (req, res) => {
+    if (!req.file) return res.status(400).json({ error: 'An image is required' });
+    const dataUrl = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+    const fields = await productExtractor.extract(dataUrl);
+    res.json({ fields });
+  })
+);
 
 /** GET /api/admin/stats — dashboard summary. */
 router.get(

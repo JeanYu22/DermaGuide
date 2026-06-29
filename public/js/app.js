@@ -107,6 +107,20 @@ async function loadProducts() {
   }
 }
 
+// Real product image with emoji fallback.
+function productImageInner(p) {
+  return p.images && p.images.length
+    ? `<img src="${p.images[0]}" alt="${(p.name || '').replace(/"/g, '')}" class="product-img">`
+    : `<span class="product-emoji">${p.emoji || '🧴'}</span>`;
+}
+
+// Small inline thumbnail (for rec cards) with emoji fallback.
+function recThumb(p) {
+  return p.images && p.images.length
+    ? `<img src="${p.images[0]}" style="width:2.4rem;height:2.4rem;object-fit:cover;border-radius:8px;display:block;">`
+    : (p.emoji || '🧴');
+}
+
 function renderProducts() {
   const container = document.getElementById('productsContainer');
   container.innerHTML = '';
@@ -115,7 +129,7 @@ function renderProducts() {
     card.className = 'product-card';
     card.onclick = () => showProductModal(p);
     card.innerHTML = `
-      <div class="product-image">${p.emoji}
+      <div class="product-image">${productImageInner(p)}
         <div class="cert-badges">${p.certs.map((c) => `<span class="cert-badge ${c}">${c.toUpperCase()}</span>`).join('')}</div>
       </div>
       <div class="product-info">
@@ -148,7 +162,11 @@ function showProductModal(product) {
     <div class="modal-content">
       <div class="modal-header"><div class="modal-handle"></div><h2 class="modal-title">${product.name}</h2></div>
       <div class="modal-body">
-        <div style="font-size:5rem;text-align:center;margin:1rem 0;">${product.emoji}</div>
+        ${product.images && product.images.length
+          ? `<img src="${product.images[0]}" class="modal-main-img" id="modalMainImg">
+             ${product.images.length > 1 ? `<div class="modal-gallery">${product.images.map((u, i) => `<img src="${u}" class="modal-thumb${i === 0 ? ' active' : ''}" onclick="document.getElementById('modalMainImg').src=this.src;this.parentNode.querySelectorAll('.modal-thumb').forEach(t=>t.classList.remove('active'));this.classList.add('active')">`).join('')}</div>` : ''}`
+          : `<div style="font-size:5rem;text-align:center;margin:1rem 0;">${product.emoji}</div>`}
+        ${product.brand ? `<div style="font-size:.85rem;color:var(--sage);font-weight:600;margin-bottom:.3rem;">${product.brand}</div>` : ''}
         <p style="font-size:1.1rem;margin-bottom:1rem;">${product.desc}</p>
         <div style="font-size:2rem;font-weight:700;color:var(--clay);margin-bottom:1.5rem;">$${product.price.toFixed(2)}</div>
         ${product.reason ? `<div class="rec-reason" style="margin-bottom:1rem;">💡 <strong>Why for you:</strong> ${product.reason}</div>` : ''}
@@ -332,7 +350,7 @@ async function renderCartBody() {
   body.innerHTML = `
     ${cart.items.map((i) => `
       <div class="cart-item">
-        <div class="cart-item-emoji">${i.product.emoji}</div>
+        <div class="cart-item-emoji">${i.product.images && i.product.images.length ? `<img src="${i.product.images[0]}" style="width:48px;height:48px;object-fit:cover;border-radius:8px;">` : i.product.emoji}</div>
         <div class="cart-item-info">
           <div class="cart-item-name">${i.product.name}</div>
           <div class="cart-item-price">$${i.lineTotal.toFixed(2)}</div>
@@ -485,7 +503,7 @@ function showRecommendations(recs) {
       <div class="rec-carousel">
         ${recs.map((p) => `
           <div class="rec-card" onclick='showProductModal(${JSON.stringify(p).replace(/'/g, "&#39;")})'>
-            <div class="rec-emoji">${p.emoji}</div>
+            <div class="rec-emoji">${recThumb(p)}</div>
             <div class="rec-name">${p.name}</div>
             <div style="font-size:.75rem;opacity:.7;margin:.3rem 0;">Great for ${(p.concerns[0] || 'your skin')}</div>
             <div class="rec-price">$${p.price.toFixed(2)}</div>
@@ -598,7 +616,7 @@ function metricsGridHTML(metrics) {
 function recCarouselHTML(title, recs) {
   return `<div class="rec-products"><div class="rec-title">${title}</div><div class="rec-carousel">
     ${recs.map((p) => `<div class="rec-card" onclick='showProductModal(${JSON.stringify(p).replace(/'/g, "&#39;")})'>
-      <div class="rec-emoji">${p.emoji}</div><div class="rec-name">${p.name}</div>
+      <div class="rec-emoji">${recThumb(p)}</div><div class="rec-name">${p.name}</div>
       <div class="rec-price">$${p.price.toFixed(2)}</div></div>`).join('')}
   </div></div>`;
 }
@@ -608,7 +626,7 @@ function recDetailHTML(title, recs) {
   return `<div class="rec-products"><div class="rec-title">${title}</div>
     ${recs.map((p) => `<div class="rec-detail" onclick='showProductModal(${JSON.stringify(p).replace(/'/g, "&#39;")})'>
       <div class="rec-detail-head">
-        <div class="rec-emoji" style="margin:0;">${p.emoji}</div>
+        <div class="rec-emoji" style="margin:0;">${recThumb(p)}</div>
         <div style="flex:1;"><div class="rec-name">${p.name}</div><div class="rec-price">$${p.price.toFixed(2)}</div></div>
         <span style="font-size:.75rem;color:var(--sage);">Tap for details ›</span>
       </div>
@@ -867,32 +885,105 @@ async function adminProducts() {
     </tbody></table>`;
 }
 
+// Working image list for the open editor.
+let editorImages = [];
+
 function adminEditProduct(product) {
   const p = product || {};
+  editorImages = [...(p.images || [])];
   const modal = document.createElement('div');
   modal.className = 'modal';
   modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
   modal.innerHTML = `<div class="modal-content"><div class="modal-header"><div class="modal-handle"></div><h2 class="modal-title">${p._id ? 'Edit' : 'New'} Product</h2></div>
     <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Product Images (first = main; include certificate photos)</label>
+        <div class="img-uploader" id="imgUploader"></div>
+        <input type="file" id="pImages" accept="image/*" multiple style="display:none;" onchange="handleEditorUpload(event)">
+        <button class="btn btn-full" style="margin-top:.4rem;background:var(--sand);color:var(--forest);" onclick="extractFromImage(this)">🤖 Auto-fill fields from a product image (AI)</button>
+        <input type="file" id="pExtract" accept="image/*" style="display:none;" onchange="runExtract(event)">
+      </div>
       <div class="form-group"><label class="form-label">SKU</label><input class="form-input" id="pSku" value="${p.sku || ''}"></div>
       <div class="form-group"><label class="form-label">Name</label><input class="form-input" id="pName" value="${p.name || ''}"></div>
+      <div class="form-group"><label class="form-label">Brand</label><input class="form-input" id="pBrand" value="${p.brand || ''}"></div>
       <div class="form-group"><label class="form-label">Description</label><input class="form-input" id="pDesc" value="${p.desc || ''}"></div>
-      <div class="form-group"><label class="form-label">Emoji</label><input class="form-input" id="pEmoji" value="${p.emoji || '🧴'}"></div>
+      <div class="form-group"><label class="form-label">Emoji (fallback if no image)</label><input class="form-input" id="pEmoji" value="${p.emoji || '🧴'}"></div>
       <div class="form-group"><label class="form-label">Price</label><input class="form-input" id="pPrice" type="number" step="0.01" value="${p.price || 0}"></div>
       <div class="form-group"><label class="form-label">Stock</label><input class="form-input" id="pStock" type="number" value="${p.stock || 0}"></div>
       <div class="form-group"><label class="form-label">Concerns (comma-separated)</label><input class="form-input" id="pConcerns" value="${(p.concerns || []).join(', ')}"></div>
       <div class="form-group"><label class="form-label">Certs (comma-separated)</label><input class="form-input" id="pCerts" value="${(p.certs || []).join(', ')}"></div>
+      <div class="form-group"><label class="form-label">Key Ingredients (comma-separated)</label><input class="form-input" id="pKeyIngredients" value="${(p.keyIngredients || []).join(', ')}"></div>
+      <div class="form-group"><label class="form-label">How to Use</label><input class="form-input" id="pHowToUse" value="${(p.howToUse || '').replace(/"/g, '&quot;')}"></div>
       <div class="form-error" id="pError"></div>
       <button class="btn btn-primary btn-full" onclick="adminSaveProduct('${p._id || ''}', this)">Save</button>
     </div></div>`;
   document.body.appendChild(modal);
+  renderEditorImages();
+}
+
+function renderEditorImages() {
+  const el = document.getElementById('imgUploader');
+  if (!el) return;
+  el.innerHTML = editorImages.map((u, i) => `
+    <div class="img-tile">
+      <img src="${u}">
+      <button class="img-remove" onclick="removeEditorImage(${i})">×</button>
+      ${i === 0 ? '<div class="img-primary">MAIN</div>' : ''}
+    </div>`).join('') +
+    `<div class="img-add" onclick="document.getElementById('pImages').click()">＋</div>`;
+}
+
+function removeEditorImage(i) { editorImages.splice(i, 1); renderEditorImages(); }
+
+async function handleEditorUpload(event) {
+  const files = Array.from(event.target.files || []);
+  event.target.value = '';
+  if (!files.length) return;
+  const form = new FormData();
+  files.forEach((f) => form.append('images', f));
+  try {
+    const { urls } = await api('/admin/uploads', { method: 'POST', body: form, isForm: true });
+    editorImages.push(...urls);
+    renderEditorImages();
+    toast(`${urls.length} image(s) uploaded`);
+  } catch (err) { toast(err.message); }
+}
+
+// AI autofill: pick an image, extract fields, fill the form.
+function extractFromImage() { document.getElementById('pExtract').click(); }
+
+async function runExtract(event) {
+  const file = event.target.files[0];
+  event.target.value = '';
+  if (!file) return;
+  toast('Reading product info from image… 🤖');
+  const form = new FormData();
+  form.append('image', file);
+  try {
+    const { fields } = await api('/admin/extract', { method: 'POST', body: form, isForm: true });
+    const setIf = (id, v) => { if (v) document.getElementById(id).value = v; };
+    setIf('pName', fields.name);
+    setIf('pBrand', fields.brand);
+    setIf('pDesc', fields.desc);
+    if (fields.price) document.getElementById('pPrice').value = fields.price;
+    if (fields.concerns?.length) document.getElementById('pConcerns').value = fields.concerns.join(', ');
+    if (fields.certs?.length) document.getElementById('pCerts').value = fields.certs.join(', ');
+    if (fields.keyIngredients?.length) document.getElementById('pKeyIngredients').value = fields.keyIngredients.join(', ');
+    setIf('pHowToUse', fields.howToUse);
+    // Also upload this image to the gallery so it's saved.
+    const upForm = new FormData(); upForm.append('images', file);
+    const { urls } = await api('/admin/uploads', { method: 'POST', body: upForm, isForm: true }).catch(() => ({ urls: [] }));
+    if (urls.length) { editorImages.push(...urls); renderEditorImages(); }
+    toast('Fields auto-filled — please review ✨');
+  } catch (err) { toast('Extraction failed: ' + err.message); }
 }
 
 async function adminSaveProduct(id, btn) {
   const body = {
-    sku: val('pSku'), name: val('pName'), desc: val('pDesc'), emoji: val('pEmoji'),
+    sku: val('pSku'), name: val('pName'), brand: val('pBrand'), desc: val('pDesc'), emoji: val('pEmoji'),
     price: parseFloat(val('pPrice')) || 0, stock: parseInt(val('pStock'), 10) || 0,
-    concerns: list('pConcerns'), certs: list('pCerts'),
+    concerns: list('pConcerns'), certs: list('pCerts'), keyIngredients: list('pKeyIngredients'),
+    howToUse: val('pHowToUse'), images: editorImages,
   };
   try {
     if (id) await api(`/admin/products/${id}`, { method: 'PUT', body });
