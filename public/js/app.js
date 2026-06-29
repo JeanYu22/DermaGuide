@@ -978,7 +978,7 @@ async function runExtract(event) {
   } catch (err) { toast('Extraction failed: ' + err.message); }
 }
 
-async function adminSaveProduct(id, btn) {
+async function adminSaveProduct(id, btn, force = false) {
   const body = {
     name: val('pName'), brand: val('pBrand'), desc: val('pDesc'), emoji: val('pEmoji'),
     price: parseFloat(val('pPrice')) || 0, stock: parseInt(val('pStock'), 10) || 0,
@@ -986,6 +986,10 @@ async function adminSaveProduct(id, btn) {
     howToUse: val('pHowToUse'), images: editorImages,
   };
   if (val('pSku')) body.sku = val('pSku'); // optional; server auto-generates if blank
+  if (force) body.allowDuplicate = true;
+
+  const errEl = document.getElementById('pError');
+  errEl.innerHTML = '';
   try {
     if (id) await api(`/admin/products/${id}`, { method: 'PUT', body });
     else await api('/admin/products', { method: 'POST', body });
@@ -993,7 +997,13 @@ async function adminSaveProduct(id, btn) {
     toast('Product saved');
     adminProducts();
     loadProducts();
-  } catch (err) { document.getElementById('pError').textContent = err.message; }
+  } catch (err) {
+    if (err.code === 'duplicate_name') {
+      errEl.innerHTML = `${err.message}<br><button class="btn btn-full" style="margin-top:.5rem;background:var(--clay);color:#fff;" onclick="adminSaveProduct('${id}', this, true)">Create anyway</button>`;
+    } else {
+      errEl.textContent = err.message;
+    }
+  }
 }
 async function adminDeleteProduct(id) {
   await api(`/admin/products/${id}`, { method: 'DELETE' });

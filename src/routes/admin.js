@@ -105,12 +105,32 @@ function generateSku(name) {
   return `PG-${slug}-${crypto.randomBytes(2).toString('hex').toUpperCase()}`;
 }
 
+function escapeRegex(s) {
+  return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 /** POST /api/admin/products — create. SKU is optional (auto-generated if blank). */
 router.post(
   '/products',
   asyncHandler(async (req, res) => {
     const body = { ...(req.body || {}) };
-    if (!body.sku || !body.sku.trim()) body.sku = generateSku(body.name);
+    const name = (body.name || '').trim();
+    if (!name) return res.status(400).json({ error: 'Product name is required' });
+
+    // Block duplicate names (case-insensitive) unless explicitly overridden.
+    if (!body.allowDuplicate) {
+      const existing = await Product.findOne({ name: new RegExp(`^${escapeRegex(name)}$`, 'i') });
+      if (existing) {
+        return res.status(409).json({
+          code: 'duplicate_name',
+          error: `A product named "${existing.name}" already exists (SKU ${existing.sku}). Edit that product, or choose "Create anyway" to add a separate one.`,
+          existing: { id: existing._id.toString(), name: existing.name, sku: existing.sku, active: existing.active },
+        });
+      }
+    }
+    delete body.allowDuplicate;
+
+    if (!body.sku || !body.sku.trim()) body.sku = generateSku(name);
     const product = await Product.create(body);
     res.status(201).json({ product });
   })
