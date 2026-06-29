@@ -42,11 +42,14 @@
         </div>
 
         <div class="section-header">
-            <h2 class="section-title">Certified Organic Collection</h2>
-            <p style="font-size: .9rem; opacity: .7;">Swipe to explore →</p>
+            <h2 class="section-title">Shop Products</h2>
+            <input type="search" class="shop-search" id="shopSearch" placeholder="🔍 Search products…">
+            <div class="filter-chips" id="filterChips"></div>
+            <p class="shop-count" id="shopCount"></p>
         </div>
-        <div class="products-scroll" id="productsSection">
-            <div class="products-container" id="productsContainer"></div>
+        <div id="productsSection">
+            <div class="products-grid" id="productsContainer"></div>
+            <div class="shop-loadmore" id="shopLoadMore"></div>
         </div>
 
         <div class="section-header" style="margin-top: 2rem;" id="tipsSection">

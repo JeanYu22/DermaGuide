@@ -97,14 +97,48 @@ function scrollToTips() { document.getElementById('tipsSection').scrollIntoView(
 // ===========================================================================
 // Products + tips rendering
 // ===========================================================================
-async function loadProducts() {
+// Storefront browse state (paginated grid + search + concern filter).
+const CONCERN_FILTERS = [
+  ['all', 'All'], ['acne', 'Acne'], ['dryness', 'Dryness'], ['redness', 'Redness'],
+  ['pigmentation', 'Pigmentation'], ['wrinkles', 'Anti-aging'], ['large pores', 'Pores'],
+  ['sensitivity', 'Sensitive'], ['oily', 'Oily'],
+];
+const shop = { page: 1, pages: 1, total: 0, search: '', concern: 'all', loading: false };
+
+async function loadProducts(reset = true) {
+  if (shop.loading) return;
+  shop.loading = true;
+  if (reset) shop.page = 1;
+  const params = new URLSearchParams({ page: shop.page, limit: 24 });
+  if (shop.search) params.set('search', shop.search);
+  if (shop.concern && shop.concern !== 'all') params.set('concern', shop.concern);
   try {
-    const { products } = await api('/products');
-    State.products = products;
+    const data = await api('/products?' + params.toString());
+    shop.total = data.total; shop.pages = data.pages;
+    State.products = reset ? data.products : State.products.concat(data.products);
     renderProducts();
   } catch (err) {
     console.error('Failed to load products:', err);
+  } finally {
+    shop.loading = false;
   }
+}
+
+function loadMoreProducts() { shop.page += 1; loadProducts(false); }
+
+function renderFilterChips() {
+  const el = document.getElementById('filterChips');
+  if (!el) return;
+  el.innerHTML = CONCERN_FILTERS.map(([k, l]) =>
+    `<button class="filter-chip ${k === shop.concern ? 'active' : ''}" onclick="setConcernFilter('${k}')">${l}</button>`).join('');
+}
+
+function setConcernFilter(k) { shop.concern = k; renderFilterChips(); loadProducts(true); }
+
+let searchTimer;
+function onShopSearch(value) {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => { shop.search = value.trim(); loadProducts(true); }, 300);
 }
 
 // Real product image with emoji fallback.
@@ -124,21 +158,34 @@ function recThumb(p) {
 function renderProducts() {
   const container = document.getElementById('productsContainer');
   container.innerHTML = '';
-  State.products.forEach((p) => {
-    const card = document.createElement('div');
-    card.className = 'product-card';
-    card.onclick = () => showProductModal(p);
-    card.innerHTML = `
-      <div class="product-image">${productImageInner(p)}
-        <div class="cert-badges">${p.certs.map((c) => `<span class="cert-badge ${c}">${c.toUpperCase()}</span>`).join('')}</div>
-      </div>
-      <div class="product-info">
-        <div class="product-name">${p.name}</div>
-        <div class="product-desc">${p.desc}</div>
-        <div class="product-price">$${p.price.toFixed(2)} ${p.inStock ? '' : '<span class="out-of-stock">• Out of stock</span>'}</div>
-      </div>`;
-    container.appendChild(card);
-  });
+
+  if (!State.products.length) {
+    container.innerHTML = '<div class="empty-grid">No products match your search.</div>';
+  } else {
+    State.products.forEach((p) => {
+      const card = document.createElement('div');
+      card.className = 'product-card';
+      card.onclick = () => showProductModal(p);
+      card.innerHTML = `
+        <div class="product-image">${productImageInner(p)}
+          <div class="cert-badges">${p.certs.map((c) => `<span class="cert-badge ${c}">${c.toUpperCase()}</span>`).join('')}</div>
+        </div>
+        <div class="product-info">
+          <div class="product-name">${p.name}</div>
+          <div class="product-desc">${p.desc}</div>
+          <div class="product-price">$${p.price.toFixed(2)}${p.inStock ? '' : '<span class="out-of-stock">Out of stock</span>'}</div>
+        </div>`;
+      container.appendChild(card);
+    });
+  }
+
+  const count = document.getElementById('shopCount');
+  if (count) count.textContent = shop.total ? `Showing ${State.products.length} of ${shop.total} products` : '';
+
+  const lm = document.getElementById('shopLoadMore');
+  if (lm) lm.innerHTML = shop.page < shop.pages
+    ? '<button class="btn btn-primary" onclick="loadMoreProducts()">Load more</button>'
+    : '';
 }
 
 function renderTips() {
@@ -874,15 +921,40 @@ async function adminOverview() {
   </div>`;
 }
 
+let adminProductCache = [];
+
 async function adminProducts() {
   const { products } = await api('/admin/products');
+  adminProductCache = products;
   document.getElementById('adminContent').innerHTML = `
-    <button class="btn btn-primary" style="margin-bottom:1rem;" onclick="adminEditProduct()">+ New Product</button>
-    <table class="admin-table"><thead><tr><th>Name</th><th>Price</th><th>Stock</th><th>Active</th><th></th></tr></thead><tbody>
-      ${products.map((p) => `<tr><td>${p.emoji} ${p.name}</td><td>$${p.price.toFixed(2)}</td><td>${p.stock}</td><td>${p.active ? '✅' : '—'}</td>
-        <td style="display:flex;gap:.4rem;"><button class="admin-small-btn edit" onclick='adminEditProduct(${JSON.stringify(p).replace(/'/g, "&#39;")})'>Edit</button>
-        <button class="admin-small-btn delete" onclick="adminDeleteProduct('${p._id}')">Del</button></td></tr>`).join('')}
-    </tbody></table>`;
+    <div style="display:flex;gap:.6rem;margin-bottom:1rem;flex-wrap:wrap;align-items:center;">
+      <button class="btn btn-primary" onclick="adminEditProduct()">+ New Product</button>
+      <input class="form-input" id="adminProdSearch" placeholder="🔍 Search name / SKU / brand…" style="flex:1;min-width:200px;" oninput="renderAdminProductRows(this.value)">
+      <span style="font-size:.8rem;opacity:.6;" id="adminProdCount"></span>
+    </div>
+    <div style="overflow-x:auto;">
+      <table class="admin-table"><thead><tr><th></th><th>Name</th><th>Source</th><th>Price</th><th>Stock</th><th>Active</th><th></th></tr></thead>
+      <tbody id="adminProdRows"></tbody></table>
+    </div>`;
+  renderAdminProductRows('');
+}
+
+function renderAdminProductRows(filter) {
+  const f = (filter || '').toLowerCase();
+  const rows = adminProductCache.filter((p) =>
+    !f || (p.name || '').toLowerCase().includes(f) || (p.sku || '').toLowerCase().includes(f) || (p.brand || '').toLowerCase().includes(f));
+  document.getElementById('adminProdCount').textContent = `${rows.length} / ${adminProductCache.length}`;
+  document.getElementById('adminProdRows').innerHTML = rows.map((p) => `
+    <tr>
+      <td>${p.images && p.images.length ? `<img src="${p.images[0]}" style="width:38px;height:38px;object-fit:cover;border-radius:6px;">` : `<span style="font-size:1.4rem;">${p.emoji || '🧴'}</span>`}</td>
+      <td>${p.name}${p.dropship ? ' <span class="cert-badge" style="background:var(--sand);color:var(--forest);">DROPSHIP</span>' : ''}</td>
+      <td style="font-size:.78rem;opacity:.7;">${p.source || 'manual'}</td>
+      <td>$${(p.price || 0).toFixed(2)}</td>
+      <td>${p.stock}</td>
+      <td>${p.active ? '✅' : '—'}</td>
+      <td style="display:flex;gap:.4rem;"><button class="admin-small-btn edit" onclick='adminEditProduct(${JSON.stringify(p).replace(/'/g, "&#39;")})'>Edit</button>
+      <button class="admin-small-btn delete" onclick="adminDeleteProduct('${p._id}')">Del</button></td>
+    </tr>`).join('') || '<tr><td colspan="7" style="text-align:center;opacity:.6;padding:1.5rem;">No products match.</td></tr>';
 }
 
 // Working image list for the open editor.
@@ -1116,9 +1188,13 @@ function bindUploadZone() {
 async function init() {
   updateAuthUI();
   renderTips();
+  renderFilterChips();
   await loadProducts();
   await loadCart();
   bindUploadZone();
+
+  const searchEl = document.getElementById('shopSearch');
+  if (searchEl) searchEl.addEventListener('input', (e) => onShopSearch(e.target.value));
 
   document.getElementById('chatInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
 
