@@ -903,7 +903,7 @@ function adminEditProduct(product) {
         <button class="btn btn-full" style="margin-top:.4rem;background:var(--sand);color:var(--forest);" onclick="extractFromImage(this)">🤖 Auto-fill fields from a product image (AI)</button>
         <input type="file" id="pExtract" accept="image/*" style="display:none;" onchange="runExtract(event)">
       </div>
-      <div class="form-group"><label class="form-label">SKU</label><input class="form-input" id="pSku" value="${p.sku || ''}"></div>
+      <div class="form-group"><label class="form-label">SKU <span style="opacity:.6;font-weight:400;">(optional — auto-generated if blank)</span></label><input class="form-input" id="pSku" value="${p.sku || ''}" placeholder="e.g. PG-SERUM-01 (leave blank to auto-generate)"></div>
       <div class="form-group"><label class="form-label">Name</label><input class="form-input" id="pName" value="${p.name || ''}"></div>
       <div class="form-group"><label class="form-label">Brand</label><input class="form-input" id="pBrand" value="${p.brand || ''}"></div>
       <div class="form-group"><label class="form-label">Description</label><input class="form-input" id="pDesc" value="${p.desc || ''}"></div>
@@ -980,11 +980,12 @@ async function runExtract(event) {
 
 async function adminSaveProduct(id, btn) {
   const body = {
-    sku: val('pSku'), name: val('pName'), brand: val('pBrand'), desc: val('pDesc'), emoji: val('pEmoji'),
+    name: val('pName'), brand: val('pBrand'), desc: val('pDesc'), emoji: val('pEmoji'),
     price: parseFloat(val('pPrice')) || 0, stock: parseInt(val('pStock'), 10) || 0,
     concerns: list('pConcerns'), certs: list('pCerts'), keyIngredients: list('pKeyIngredients'),
     howToUse: val('pHowToUse'), images: editorImages,
   };
+  if (val('pSku')) body.sku = val('pSku'); // optional; server auto-generates if blank
   try {
     if (id) await api(`/admin/products/${id}`, { method: 'PUT', body });
     else await api('/admin/products', { method: 'POST', body });

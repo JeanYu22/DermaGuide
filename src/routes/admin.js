@@ -95,20 +95,34 @@ router.get(
   })
 );
 
-/** POST /api/admin/products — create. */
+/** Auto-generate a readable, unique SKU from a product name. */
+function generateSku(name) {
+  const slug = String(name || 'item')
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 14) || 'ITEM';
+  return `PG-${slug}-${crypto.randomBytes(2).toString('hex').toUpperCase()}`;
+}
+
+/** POST /api/admin/products — create. SKU is optional (auto-generated if blank). */
 router.post(
   '/products',
   asyncHandler(async (req, res) => {
-    const product = await Product.create(req.body || {});
+    const body = { ...(req.body || {}) };
+    if (!body.sku || !body.sku.trim()) body.sku = generateSku(body.name);
+    const product = await Product.create(body);
     res.status(201).json({ product });
   })
 );
 
-/** PUT /api/admin/products/:id — update. */
+/** PUT /api/admin/products/:id — update. Blank SKU leaves the existing one untouched. */
 router.put(
   '/products/:id',
   asyncHandler(async (req, res) => {
-    const product = await Product.findByIdAndUpdate(req.params.id, req.body || {}, { new: true, runValidators: true });
+    const body = { ...(req.body || {}) };
+    if (!body.sku || !body.sku.trim()) delete body.sku; // don't overwrite with empty
+    const product = await Product.findByIdAndUpdate(req.params.id, body, { new: true, runValidators: true });
     if (!product) return res.status(404).json({ error: 'Product not found' });
     res.json({ product });
   })
