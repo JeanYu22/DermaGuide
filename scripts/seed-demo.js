@@ -14,6 +14,13 @@ function slug(name, i) {
   return `DEMO-${s}-${String(i + 1).padStart(2, '0')}`;
 }
 
+// A relevant, stable stock photo per demo product (free LoremFlickr service —
+// real skincare/cosmetics images). `lock` keeps the same image per product.
+// The storefront falls back to the emoji if the image fails to load.
+function demoImage(i) {
+  return `https://loremflickr.com/600/600/skincare,cosmetics,beauty?lock=${i + 1}`;
+}
+
 (async () => {
   await connect();
 
@@ -45,7 +52,7 @@ function slug(name, i) {
       stock: 20 + ((i * 7) % 80), // varied, deterministic
       active: true,
       source: 'demo',
-      images: [],
+      images: [demoImage(i)],
     };
     await Product.updateOne({ sku }, { $set: doc }, { upsert: true });
     added += 1;

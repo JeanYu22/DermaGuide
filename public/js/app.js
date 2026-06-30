@@ -141,17 +141,23 @@ function onShopSearch(value) {
   searchTimer = setTimeout(() => { shop.search = value.trim(); loadProducts(true); }, 300);
 }
 
+// onerror handler that swaps a failed <img> for the product emoji.
+function imgFallback(emoji, cls) {
+  const e = (emoji || '🧴').replace(/'/g, '');
+  return `this.onerror=null;this.replaceWith(Object.assign(document.createElement('span'),{className:'${cls}',textContent:'${e}'}))`;
+}
+
 // Real product image with emoji fallback.
 function productImageInner(p) {
   return p.images && p.images.length
-    ? `<img src="${p.images[0]}" alt="${(p.name || '').replace(/"/g, '')}" class="product-img">`
+    ? `<img src="${p.images[0]}" alt="${(p.name || '').replace(/"/g, '')}" class="product-img" loading="lazy" onerror="${imgFallback(p.emoji, 'product-emoji')}">`
     : `<span class="product-emoji">${p.emoji || '🧴'}</span>`;
 }
 
 // Small inline thumbnail (for rec cards) with emoji fallback.
 function recThumb(p) {
   return p.images && p.images.length
-    ? `<img src="${p.images[0]}" style="width:2.4rem;height:2.4rem;object-fit:cover;border-radius:8px;display:block;">`
+    ? `<img src="${p.images[0]}" loading="lazy" style="width:2.4rem;height:2.4rem;object-fit:cover;border-radius:8px;display:block;" onerror="${imgFallback(p.emoji, 'rec-emoji')}">`
     : (p.emoji || '🧴');
 }
 
@@ -210,8 +216,8 @@ function showProductModal(product) {
       <div class="modal-header"><div class="modal-handle"></div><h2 class="modal-title">${product.name}</h2></div>
       <div class="modal-body">
         ${product.images && product.images.length
-          ? `<img src="${product.images[0]}" class="modal-main-img" id="modalMainImg">
-             ${product.images.length > 1 ? `<div class="modal-gallery">${product.images.map((u, i) => `<img src="${u}" class="modal-thumb${i === 0 ? ' active' : ''}" onclick="document.getElementById('modalMainImg').src=this.src;this.parentNode.querySelectorAll('.modal-thumb').forEach(t=>t.classList.remove('active'));this.classList.add('active')">`).join('')}</div>` : ''}`
+          ? `<img src="${product.images[0]}" class="modal-main-img" id="modalMainImg" onerror="this.onerror=null;this.style.display='none'">
+             ${product.images.length > 1 ? `<div class="modal-gallery">${product.images.map((u, i) => `<img src="${u}" class="modal-thumb${i === 0 ? ' active' : ''}" onclick="document.getElementById('modalMainImg').src=this.src;document.getElementById('modalMainImg').style.display='';this.parentNode.querySelectorAll('.modal-thumb').forEach(t=>t.classList.remove('active'));this.classList.add('active')">`).join('')}</div>` : ''}`
           : `<div style="font-size:5rem;text-align:center;margin:1rem 0;">${product.emoji}</div>`}
         ${product.brand ? `<div style="font-size:.85rem;color:var(--sage);font-weight:600;margin-bottom:.3rem;">${product.brand}</div>` : ''}
         <p style="font-size:1.1rem;margin-bottom:1rem;">${product.desc}</p>
@@ -946,7 +952,7 @@ function renderAdminProductRows(filter) {
   document.getElementById('adminProdCount').textContent = `${rows.length} / ${adminProductCache.length}`;
   document.getElementById('adminProdRows').innerHTML = rows.map((p) => `
     <tr>
-      <td>${p.images && p.images.length ? `<img src="${p.images[0]}" style="width:38px;height:38px;object-fit:cover;border-radius:6px;">` : `<span style="font-size:1.4rem;">${p.emoji || '🧴'}</span>`}</td>
+      <td>${p.images && p.images.length ? `<img src="${p.images[0]}" loading="lazy" style="width:38px;height:38px;object-fit:cover;border-radius:6px;" onerror="this.onerror=null;this.replaceWith(Object.assign(document.createElement('span'),{textContent:'${(p.emoji || '🧴').replace(/'/g, '')}',style:'font-size:1.4rem'}))">` : `<span style="font-size:1.4rem;">${p.emoji || '🧴'}</span>`}</td>
       <td>${p.name}${p.dropship ? ' <span class="cert-badge" style="background:var(--sand);color:var(--forest);">DROPSHIP</span>' : ''}</td>
       <td style="font-size:.78rem;opacity:.7;">${p.source || 'manual'}</td>
       <td>$${(p.price || 0).toFixed(2)}</td>
