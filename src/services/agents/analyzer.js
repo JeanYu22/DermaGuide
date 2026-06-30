@@ -21,15 +21,49 @@ function labelMapFromProfile(profile) {
   return Object.fromEntries(profile.metrics.map(([k, l]) => [k, l]));
 }
 
+// Per-metric scoring hints so the small grader doesn't miss obvious problems.
+const METRIC_HINTS = {
+  redness: 'REDNESS: any visible pink/red discoloration, flushing or a rash. Clearly red/inflamed skin = 6-9; calm, even tone = 0-2. Do NOT score 0 if red areas are visible.',
+  sensitivity: 'SENSITIVITY: reactive/irritated skin — blotchy or uneven redness, visible reaction. If the skin looks red, blotchy or irritated, score this 5+.',
+  irritation: 'IRRITATION: rashes, inflamed, scratched or hive-like areas. Visible irritation = 6-9.',
+  acne: 'ACNE: count visible pimples, pustules and comedones; many lesions = 7-9.',
+  blackheads: 'BLACKHEADS: visible blackheads/clogged pores.',
+  oiliness: 'OILINESS: visible shine/greasiness.',
+  folliculitis: 'FOLLICULITIS: small inflamed bumps around hair follicles.',
+  dryness: 'DRYNESS: flaking, scaling, rough dull patches, tightness.',
+  dehydration: 'DEHYDRATION: dull, crepey, tight-looking skin.',
+  roughness: 'ROUGHNESS: uneven, bumpy or coarse texture.',
+  calluses: 'CALLUSES: thickened, hardened skin (often heels/soles/palms).',
+  cracking: 'CRACKING: visible fissures or splits in the skin.',
+  bumps: 'BUMPS: keratosis pilaris / folliculitis — small rough bumps.',
+  pigmentation: 'PIGMENTATION: dark spots, uneven tone, marks.',
+  wrinkles: 'WRINKLES: visible fine lines or wrinkles.',
+  sagging: 'SAGGING: visible laxity / loose skin.',
+  crepiness: 'CREPINESS: thin, finely-lined, paper-like texture.',
+  nailHealth: 'NAIL_HEALTH: discoloration, ridging or damage to nails (10 = healthy looks like a LOW score here; rate problems).',
+  scarring: 'SCARRING: visible scars or post-acne marks.',
+  sunDamage: 'SUN_DAMAGE: sunspots, leathery texture, uneven tan.',
+  blockedPores: 'BLOCKED_PORES: congested/clogged pores.',
+  enlargedPores: 'ENLARGED_PORES: visibly large pores.',
+  texture: 'TEXTURE: overall surface irregularity.',
+};
+
 /** Build the analysis prompt for a specific body-part profile. */
 function buildPrompt(profile) {
   const metricLines = profile.metrics.map(([k]) => `${keyToLabel(k)}: <int>`).join('\n');
-  const metricNames = profile.metrics.map(([, l]) => l).join(', ');
+  const hints = profile.metrics
+    .map(([k]) => METRIC_HINTS[k])
+    .filter(Boolean)
+    .map((h) => `- ${h}`)
+    .join('\n');
   return `You are a careful dermatology vision assistant examining a photo of a person's ${profile.label.toLowerCase()}.
 
-Score ONLY what is actually visible (0 = none, 3 = mild, 6 = moderate, 9 = severe). These metrics are specific to this body area: ${metricNames}. Do not under-rate clearly visible problems, and do not invent issues on healthy-looking skin.
+Look closely and score ONLY what is actually visible (0 = none, 3 = mild, 6 = moderate, 9 = severe). Use this guidance for each metric:
+${hints}
 
-SAFETY: If you see signs of a SERIOUS skin condition or injury that needs a doctor or dermatologist — for example an open wound, bleeding, signs of infection (pus, spreading redness, swelling), a burn, a suspicious or rapidly changing mole, or a severe/widespread rash — set MEDICAL_FLAG: yes and advise seeing a professional. Otherwise MEDICAL_FLAG: no.
+Do NOT under-rate clearly visible problems (especially redness, rashes and irritation), and do not invent issues on healthy-looking skin.
+
+SAFETY: If you see signs that need a doctor or dermatologist — an open wound, bleeding, signs of infection (pus, spreading redness, swelling), a burn, a suspicious or changing mole, OR a visible rash / hives / widespread redness that looks like an allergic reaction or skin condition — set MEDICAL_FLAG: yes and advise seeing a professional. Otherwise MEDICAL_FLAG: no.
 
 Reply with ONLY the lines below, plain text, no markdown, no brackets, each <int> a whole number 0-10:
 BODY_PART: ${profile.label}

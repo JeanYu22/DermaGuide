@@ -732,10 +732,31 @@ async function handleChatImage(event) {
   }
 }
 
+// i18n helpers for analysis output (metric/body-part/skin-type labels).
+function L(key, fallback) { return window.tLabel ? window.tLabel(key, fallback) : (fallback || key); }
+function localizeDefs(defs) {
+  return (defs || []).map((d) => ({ key: d.key, label: L('m_' + d.key, d.label) }));
+}
+function localizedTopConcerns(metrics, defs) {
+  const labelOf = {};
+  (defs || []).forEach((d) => { labelOf[d.key] = L('m_' + d.key, d.label); });
+  return Object.entries(metrics || {})
+    .filter(([, v]) => v > 0)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([k, v]) => `${labelOf[k] || k} (${v}/10)`)
+    .join(', ');
+}
+function localizedSubtitle(result) {
+  const partKey = 'bp_' + String(result.bodyPartCategory || result.bodyPart || 'skin').toLowerCase();
+  const skinKey = 'st_' + String(result.skinType || 'normal').toLowerCase();
+  return `${L(partKey, cap(result.bodyPart))} · ${L(skinKey, cap(result.skinType))}`;
+}
+
 function metricsGridHTML(metrics, metricDefs) {
-  const defs = metricDefs && metricDefs.length
+  const defs = localizeDefs(metricDefs && metricDefs.length
     ? metricDefs
-    : Object.keys(metrics).map((k) => ({ key: k, label: k.replace(/([A-Z])/g, ' $1').replace(/^./, (s) => s.toUpperCase()) }));
+    : Object.keys(metrics).map((k) => ({ key: k, label: k.replace(/([A-Z])/g, ' $1').replace(/^./, (s) => s.toUpperCase()) })));
   return defs.map(({ key, label }) => {
     const value = metrics[key] || 0;
     const severity = value < 4 ? 'low' : value < 7 ? 'medium' : 'high';
@@ -748,9 +769,8 @@ function medicalBannerHTML(result) {
   if (!result.medicalFlag) return '';
   const advice = result.medicalAdvice || 'Some signs here may need a doctor or dermatologist. Please consult a professional for a proper diagnosis.';
   return `<div style="margin:1rem 0;padding:1rem;border-radius:12px;background:linear-gradient(135deg,#ffebee,#ffcdd2);border:2px solid #e53935;">
-    <div style="display:flex;align-items:center;gap:.5rem;font-weight:700;color:#c62828;margin-bottom:.3rem;"><span style="font-size:1.3rem;">⚕️</span> Please see a professional</div>
+    <div style="display:flex;align-items:center;gap:.5rem;font-weight:700;color:#c62828;margin-bottom:.3rem;"><span style="font-size:1.3rem;">⚕️</span> ${L('see_pro', 'Please see a professional')}</div>
     <div style="font-size:.9rem;color:#5d4037;">${advice}</div>
-    <div style="font-size:.75rem;color:#8d6e63;margin-top:.4rem;">This app provides cosmetic guidance only and is not a medical diagnosis.</div>
   </div>`;
 }
 
@@ -776,8 +796,8 @@ function recDetailHTML(title, recs) {
         <div class="rec-vcard-body">
           <div class="rec-name">${p.name}</div>
           <div class="rec-price">$${p.price.toFixed(2)}</div>
-          ${p.reason ? `<div class="rec-reason">💡 <strong>Why:</strong> ${p.reason}</div>` : ''}
-          ${p.howToUse ? `<div class="rec-howto">📋 <strong>How to use:</strong> ${p.howToUse}</div>` : ''}
+          ${p.reason ? `<div class="rec-reason">💡 <strong>${L('rec_why', 'Why')}:</strong> ${p.reason}</div>` : ''}
+          ${p.howToUse ? `<div class="rec-howto">📋 <strong>${L('rec_how', 'How to use')}:</strong> ${p.howToUse}</div>` : ''}
         </div>
       </div>`).join('')}
     </div>
@@ -797,25 +817,23 @@ function displayChatAnalysis(result, mlResults) {
     <div class="message-label">Lily</div>
     <div class="message-bubble">
       <div class="pro-analysis">
-        <div class="analysis-header"><h3>Professional Skin Analysis</h3>
-          <div class="analysis-subtitle">${cap(bodyPart)} - ${cap(skinType)} Skin</div></div>
+        <div class="analysis-header"><h3>${L('pro_analysis', 'Professional Skin Analysis')}</h3>
+          <div class="analysis-subtitle">${localizedSubtitle(result)}</div></div>
         ${medicalBannerHTML(result)}
         <div class="radar-container"><canvas id="${canvasId}" width="400" height="400"></canvas></div>
         <div class="metrics-grid" id="grid-${analysisId}">${metricsGridHTML(metrics, metricDefs)}</div>
-        <div class="analysis-summary"><div class="summary-title">Top Concerns</div><div>${topConcerns}</div></div>
-        <div class="analysis-summary"><div class="summary-title">Professional Recommendation</div><div>${recommendation || '—'}</div></div>
+        <div class="analysis-summary"><div class="summary-title">${L('top_concerns', 'Top Concerns')}</div><div>${localizedTopConcerns(metrics, metricDefs) || topConcerns}</div></div>
+        <div class="analysis-summary"><div class="summary-title">${L('pro_rec', 'Professional Recommendation')}</div><div>${recommendation || '—'}</div></div>
         ${ml && ml.mlConcerns ? `<div class="ml-status-box"><div style="display:flex;align-items:center;gap:.5rem;font-size:.9rem;">
-          <span>✅</span><span class="ml-status-title">ML Cross-Validation Active</span>
-          <span class="ml-confidence-badge">${Math.round((ml.confidence || 0) * 100)}% confidence</span></div>
-          <div class="ml-status-desc">Light green overlay shows ML-detected metrics for comparison (face only)</div></div>` : ''}
+          <span>✅</span><span class="ml-status-title">${L('ml_active', 'ML Cross-Validation Active')}</span>
+          <span class="ml-confidence-badge">${Math.round((ml.confidence || 0) * 100)}% confidence</span></div></div>` : ''}
         ${feedbackSectionHTML(analysisId)}
       </div>
-      <div style="margin-top:1rem;color:var(--sage);font-size:.95rem;">💬 What would you like to know about treating these concerns?</div>
     </div>`;
   container.appendChild(div);
-  if (recommendedProducts?.length) container.appendChild(wrapMessage(recDetailHTML(`Recommended for your ${bodyPart}:`, recommendedProducts)));
+  if (recommendedProducts?.length) container.appendChild(wrapMessage(recDetailHTML(L('recommended_for', 'Recommended for you'), recommendedProducts)));
   container.scrollTop = container.scrollHeight;
-  setTimeout(() => drawRadarChart(canvasId, metrics, metricDefs, ml), 300);
+  setTimeout(() => drawRadarChart(canvasId, metrics, localizeDefs(metricDefs), ml), 300);
 }
 
 function wrapMessage(innerHTML) {
@@ -828,12 +846,12 @@ function cap(s) { return (s || '').charAt(0).toUpperCase() + (s || '').slice(1);
 
 function feedbackSectionHTML(analysisId) {
   return `<div class="feedback-section" id="feedback-${analysisId}">
-    <div class="feedback-title">Is this analysis accurate?</div>
+    <div class="feedback-title">${L('accurate_q', 'Is this analysis accurate?')}</div>
     <div style="display:flex;gap:.6rem;flex-wrap:wrap;">
-      <button class="btn btn-primary" style="flex:1;min-width:140px;" onclick="confirmAnalysis('${analysisId}')">✓ Looks accurate</button>
-      <button class="btn" style="flex:1;min-width:140px;background:var(--sand);color:var(--forest);" onclick="adjustAnalysis('${analysisId}')">✎ Adjust scores</button>
+      <button class="btn btn-primary" style="flex:1;min-width:140px;" onclick="confirmAnalysis('${analysisId}')">${L('looks_accurate', '✓ Looks accurate')}</button>
+      <button class="btn" style="flex:1;min-width:140px;background:var(--sand);color:var(--forest);" onclick="adjustAnalysis('${analysisId}')">${L('adjust_scores', '✎ Adjust scores')}</button>
     </div>
-    <div style="font-size:.72rem;opacity:.6;margin-top:.6rem;text-align:center;">Your feedback continuously trains the analyzer to score more accurately.</div>
+    <div style="font-size:.72rem;opacity:.6;margin-top:.6rem;text-align:center;">${L('feedback_train', 'Your feedback continuously trains the analyzer.')}</div>
   </div>`;
 }
 
@@ -859,20 +877,20 @@ function adjustAnalysis(analysisId) {
     ? store.metricDefs
     : Object.keys(metrics).map((k) => ({ key: k, label: k.replace(/([A-Z])/g, ' $1').replace(/^./, (s) => s.toUpperCase()) }));
   section.innerHTML = `
-    <div class="feedback-title">Drag to set the correct scores</div>
+    <div class="feedback-title">${L('drag_scores', 'Drag to set the correct scores')}</div>
     <div>
       ${defs.map(({ key, label }) => {
         const v = metrics[key] ?? 0;
         return `<div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.45rem;">
-          <span style="width:120px;font-size:.78rem;">${label}</span>
+          <span style="width:120px;font-size:.78rem;">${L('m_' + key, label)}</span>
           <input type="range" min="0" max="10" value="${v}" data-key="${key}" style="flex:1;"
             oninput="document.getElementById('val-${analysisId}-${key}').textContent=this.value">
           <span id="val-${analysisId}-${key}" style="width:22px;text-align:right;font-weight:700;color:var(--forest);">${v}</span>
         </div>`;
       }).join('')}
     </div>
-    <button class="btn btn-primary btn-full" style="margin-top:.6rem;" onclick="submitCorrection('${analysisId}', this)">Save corrected scores</button>
-    <button class="btn btn-full" style="margin-top:.5rem;background:var(--sand);color:var(--forest);" onclick="resetFeedback('${analysisId}')">Cancel</button>`;
+    <button class="btn btn-primary btn-full" style="margin-top:.6rem;" onclick="submitCorrection('${analysisId}', this)">${L('save_scores', 'Save corrected scores')}</button>
+    <button class="btn btn-full" style="margin-top:.5rem;background:var(--sand);color:var(--forest);" onclick="resetFeedback('${analysisId}')">${L('cancel', 'Cancel')}</button>`;
 }
 
 // Restore the confirm/adjust buttons (used by Adjust → Cancel).
@@ -900,7 +918,7 @@ async function submitCorrection(analysisId, btn) {
     analysisStore[analysisId] = ctx;
     const grid = document.getElementById('grid-' + analysisId);
     if (grid) grid.innerHTML = metricsGridHTML(result.metrics, defs);
-    if (ctx.canvasId) drawRadarChart(ctx.canvasId, result.metrics, defs, ctx.mlResults);
+    if (ctx.canvasId) drawRadarChart(ctx.canvasId, result.metrics, localizeDefs(defs), ctx.mlResults);
 
     section.innerHTML = `<div style="text-align:center;padding:1rem;color:var(--forest);">
       <div style="font-size:1.7rem;">🧠✅</div><div style="font-weight:600;">Saved — thank you!</div>
@@ -971,21 +989,21 @@ function displayStandaloneAnalysis(result, imgSrc, mlResults) {
   content.innerHTML = `
     <img src="${imgSrc}" class="preview-img">
     <div class="pro-analysis">
-      <div class="analysis-header"><h3>Professional Skin Analysis</h3><div class="analysis-subtitle">${cap(bodyPart)} - ${cap(skinType)} Skin</div></div>
+      <div class="analysis-header"><h3>${L('pro_analysis', 'Professional Skin Analysis')}</h3><div class="analysis-subtitle">${localizedSubtitle(result)}</div></div>
       ${medicalBannerHTML(result)}
       <div class="radar-container"><canvas id="${canvasId}" width="400" height="400"></canvas></div>
       <div class="metrics-grid" id="grid-${analysisId}">${metricsGridHTML(metrics, metricDefs)}</div>
-      <div class="analysis-summary"><div class="summary-title">Top Concerns</div><div>${topConcerns}</div></div>
-      <div class="analysis-summary"><div class="summary-title">Professional Recommendation</div><div>${recommendation || '—'}</div></div>
-      ${ml && ml.mlConcerns ? `<div class="ml-status-box"><div style="display:flex;align-items:center;gap:.5rem;font-size:.9rem;"><span>✅</span><span class="ml-status-title">ML Cross-Validation Active</span><span class="ml-confidence-badge">${Math.round((ml.confidence || 0) * 100)}% confidence</span></div></div>` : ''}
+      <div class="analysis-summary"><div class="summary-title">${L('top_concerns', 'Top Concerns')}</div><div>${localizedTopConcerns(metrics, metricDefs) || topConcerns}</div></div>
+      <div class="analysis-summary"><div class="summary-title">${L('pro_rec', 'Professional Recommendation')}</div><div>${recommendation || '—'}</div></div>
+      ${ml && ml.mlConcerns ? `<div class="ml-status-box"><div style="display:flex;align-items:center;gap:.5rem;font-size:.9rem;"><span>✅</span><span class="ml-status-title">${L('ml_active', 'ML Cross-Validation Active')}</span><span class="ml-confidence-badge">${Math.round((ml.confidence || 0) * 100)}% confidence</span></div></div>` : ''}
       ${feedbackSectionHTML(analysisId)}
-      ${recommendedProducts?.length ? recDetailHTML(`Top products for your ${bodyPart}:`, recommendedProducts) : ''}
+      ${recommendedProducts?.length ? recDetailHTML(L('recommended_for', 'Recommended for you'), recommendedProducts) : ''}
       <div style="margin-top:1.5rem;display:flex;gap:1rem;flex-wrap:wrap;">
-        <button class="btn btn-primary" style="flex:1;min-width:140px;" onclick="retakePhoto()">📸 New Analysis</button>
-        <button class="btn btn-primary" style="flex:1;min-width:140px;" onclick="chatAboutAnalysis()">💬 Chat with Lily</button>
+        <button class="btn btn-primary" style="flex:1;min-width:140px;" onclick="retakePhoto()">📸 ${L('new_analysis', 'New Analysis')}</button>
+        <button class="btn btn-primary" style="flex:1;min-width:140px;" onclick="chatAboutAnalysis()">💬 ${L('chat_lily_btn', 'Chat with Lily')}</button>
       </div>
     </div>`;
-  setTimeout(() => drawRadarChart(canvasId, metrics, metricDefs, ml), 300);
+  setTimeout(() => drawRadarChart(canvasId, metrics, localizeDefs(metricDefs), ml), 300);
 }
 
 function retakePhoto() {

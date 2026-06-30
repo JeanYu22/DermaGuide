@@ -1,10 +1,10 @@
 /* ===========================================================================
- * Lightweight i18n. English is the default; switcher covers Chinese, Korean,
- * French, Indonesian, Japanese, Arabic (RTL). Translations are AI-generated as
- * a starting point — refine wording as needed.
+ * Lightweight i18n. English default; switcher covers Traditional Chinese,
+ * Korean, French, Indonesian, Japanese, Arabic (RTL). AI-generated starting
+ * translations — refine as needed. Missing keys fall back to English.
  *
- * Usage in HTML:  <span data-i18n="key"></span>   <input data-i18n-ph="key">
- * Usage in JS:    t('key')
+ * HTML:  <span data-i18n="key"></span>   <input data-i18n-ph="key">
+ * JS:    t('key')   tLabel('m_redness')  (metric/body-part/skin-type labels)
  * ======================================================================== */
 (function () {
   const STRINGS = {
@@ -27,26 +27,55 @@
       mission_t: 'Our Mission', mission_d: 'Make trustworthy, personalised skincare accessible to everyone — combining dermatology-aware AI with clean, certified products.',
       vision_t: 'Our Vision', vision_d: 'A world where caring for your skin is simple, science-guided, and kind to the planet.',
       meet_lily: 'Hi, I\'m Lily 👋', lily_intro: 'Your AI skincare nurse. Ready to analyze your skin and find what truly works for you.',
+      // Analyzer result UI
+      pro_analysis: 'Professional Skin Analysis', top_concerns: 'Top Concerns', pro_rec: 'Professional Recommendation',
+      accurate_q: 'Is this analysis accurate?', feedback_train: 'Your feedback continuously trains the analyzer.',
+      rec_why: 'Why', rec_how: 'How to use', recommended_for: 'Recommended for you',
+      new_analysis: 'New Analysis', chat_lily_btn: 'Chat with Lily', ml_active: 'ML Cross-Validation Active',
+      see_pro: 'Please see a professional', save_scores: 'Save corrected scores', drag_scores: 'Drag to set the correct scores', cancel: 'Cancel',
+      // Metric labels
+      m_dryness: 'Dryness', m_dehydration: 'Dehydration', m_wrinkles: 'Wrinkles', m_sagging: 'Sagging',
+      m_sensitivity: 'Sensitivity', m_redness: 'Redness', m_blockedPores: 'Blocked Pores', m_enlargedPores: 'Enlarged Pores',
+      m_acne: 'Acne', m_pigmentation: 'Pigmentation', m_crepiness: 'Crepiness', m_roughness: 'Roughness',
+      m_irritation: 'Irritation', m_bumps: 'Keratosis / Bumps', m_sunDamage: 'Sun Damage', m_calluses: 'Calluses',
+      m_cracking: 'Cracking / Fissures', m_nailHealth: 'Nail Health', m_blackheads: 'Blackheads', m_oiliness: 'Oiliness',
+      m_folliculitis: 'Folliculitis', m_scarring: 'Scarring', m_texture: 'Texture',
+      // Body parts + skin types
+      bp_face: 'Face', bp_neck: 'Neck', bp_hand: 'Hand', bp_arm: 'Arm', bp_leg: 'Leg', bp_foot: 'Foot', bp_back: 'Back', bp_chest: 'Chest', bp_skin: 'Skin',
+      st_dry: 'Dry', st_normal: 'Normal', st_oily: 'Oily', st_combination: 'Combination',
     },
     zh: {
-      tagline: '你的有机护肤圣地',
-      enter_store: '进入商店', quick_analysis: '快速肤质分析', sign_in: '登录',
-      nav_shop: '商店', nav_chat: '咨询', nav_analyze: '分析',
-      qa_consult: '咨询', qa_scan: '肌肤扫描', qa_tips: '护肤贴士', qa_shopall: '全部商品',
-      shop_title: '选购产品', search_ph: '搜索产品…', tips_title: '专家贴士',
-      chat_title: 'Lily · 护肤顾问', chat_ph: '输入您的信息…',
-      analyzer_title: 'AI 肌肤分析', upload_title: '上传照片', upload_text: '面部、手、手臂、腿——任何部位！',
-      add_cart: '加入购物车', checkout: '结账', place_order: '提交订单',
-      looks_accurate: '✓ 准确', adjust_scores: '✎ 调整评分',
-      hero_title: '了解你的肌肤，自信护理。',
-      hero_sub: '由你的虚拟顾问 Lily 引导，提供 AI 肌肤分析与个性化有机护肤。',
-      get_started: '立即开始', how_it_works: '使用方法',
-      benefit1_t: '分析任何肌肤', benefit1_d: '拍下面部、手、腿或背部，AI 为你的肌肤评分，并提示需要就医的情况。',
-      benefit2_t: '个性化推荐', benefit2_d: '为你的需求挑选有机、纯素产品——并说明推荐理由与使用方法。',
-      benefit3_t: '与 Lily 对话', benefit3_d: '随时与 AI 护肤顾问交流，获得友好实用的建议。',
-      mission_t: '我们的使命', mission_d: '让可信赖的个性化护肤惠及每个人——结合具皮肤科意识的 AI 与纯净认证产品。',
-      vision_t: '我们的愿景', vision_d: '让护理肌肤变得简单、有科学依据且对地球友善。',
-      meet_lily: '你好，我是 Lily 👋', lily_intro: '你的 AI 护肤护士，随时为你分析肌肤，找到真正适合你的方案。',
+      tagline: '你的有機護膚聖地',
+      enter_store: '進入商店', quick_analysis: '快速膚質分析', sign_in: '登入',
+      nav_shop: '商店', nav_chat: '諮詢', nav_analyze: '分析',
+      qa_consult: '諮詢', qa_scan: '肌膚掃描', qa_tips: '護膚貼士', qa_shopall: '全部商品',
+      shop_title: '選購產品', search_ph: '搜尋產品…', tips_title: '專家貼士',
+      chat_title: 'Lily · 護膚顧問', chat_ph: '輸入您的訊息…',
+      analyzer_title: 'AI 肌膚分析', upload_title: '上傳照片', upload_text: '面部、手、手臂、腿——任何部位！',
+      add_cart: '加入購物車', checkout: '結帳', place_order: '提交訂單',
+      looks_accurate: '✓ 準確', adjust_scores: '✎ 調整評分',
+      hero_title: '了解你的肌膚，自信護理。',
+      hero_sub: '由你的虛擬顧問 Lily 引導，提供 AI 肌膚分析與個人化有機護膚。',
+      get_started: '立即開始', how_it_works: '使用方法',
+      benefit1_t: '分析任何肌膚', benefit1_d: '拍下面部、手、腿或背部，AI 為你的肌膚評分，並提示需要就醫的情況。',
+      benefit2_t: '個人化推薦', benefit2_d: '為你的需求挑選有機、純素產品——並說明推薦理由與使用方法。',
+      benefit3_t: '與 Lily 對話', benefit3_d: '隨時與 AI 護膚顧問交流，獲得親切實用的建議。',
+      mission_t: '我們的使命', mission_d: '讓可信賴的個人化護膚惠及每個人——結合具皮膚科意識的 AI 與純淨認證產品。',
+      vision_t: '我們的願景', vision_d: '讓護理肌膚變得簡單、有科學依據且對地球友善。',
+      meet_lily: '你好，我是 Lily 👋', lily_intro: '你的 AI 護膚護理師，隨時為你分析肌膚，找到真正適合你的方案。',
+      pro_analysis: '專業肌膚分析', top_concerns: '主要問題', pro_rec: '專業建議',
+      accurate_q: '這份分析準確嗎？', feedback_train: '您的回饋會持續訓練分析器。',
+      rec_why: '原因', rec_how: '使用方法', recommended_for: '為您推薦',
+      new_analysis: '新的分析', chat_lily_btn: '與 Lily 對話', ml_active: 'ML 交叉驗證已啟用',
+      see_pro: '請諮詢專業人士', save_scores: '儲存修正後的評分', drag_scores: '拖動以設定正確評分', cancel: '取消',
+      m_dryness: '乾燥', m_dehydration: '缺水', m_wrinkles: '皺紋', m_sagging: '鬆弛',
+      m_sensitivity: '敏感', m_redness: '泛紅', m_blockedPores: '阻塞毛孔', m_enlargedPores: '粗大毛孔',
+      m_acne: '痘痘', m_pigmentation: '色素沉澱', m_crepiness: '細紋鬆薄', m_roughness: '粗糙',
+      m_irritation: '刺激', m_bumps: '角化／顆粒', m_sunDamage: '曬傷', m_calluses: '厚繭',
+      m_cracking: '龜裂', m_nailHealth: '指甲健康', m_blackheads: '黑頭', m_oiliness: '出油',
+      m_folliculitis: '毛囊炎', m_scarring: '疤痕', m_texture: '膚質',
+      bp_face: '臉部', bp_neck: '頸部', bp_hand: '手部', bp_arm: '手臂', bp_leg: '腿部', bp_foot: '足部', bp_back: '背部', bp_chest: '胸部', bp_skin: '肌膚',
+      st_dry: '乾性', st_normal: '中性', st_oily: '油性', st_combination: '混合性',
     },
     ko: {
       tagline: '당신의 유기농 스킨케어 안식처',
@@ -67,6 +96,11 @@
       mission_t: '우리의 미션', mission_d: '피부과 지식을 갖춘 AI와 깨끗한 인증 제품으로 신뢰할 수 있는 맞춤 스킨케어를 모두에게.',
       vision_t: '우리의 비전', vision_d: '피부 관리가 간단하고 과학적이며 지구에 친절한 세상.',
       meet_lily: '안녕하세요, Lily예요 👋', lily_intro: '당신의 AI 스킨케어 간호사입니다. 피부를 분석하고 잘 맞는 제품을 찾아드릴게요.',
+      pro_analysis: '전문 피부 분석', top_concerns: '주요 고민', pro_rec: '전문가 추천',
+      accurate_q: '이 분석이 정확한가요?', feedback_train: '회원님의 피드백이 분석기를 계속 학습시킵니다.',
+      rec_why: '이유', rec_how: '사용법', recommended_for: '추천 제품',
+      new_analysis: '새 분석', chat_lily_btn: 'Lily와 대화', ml_active: 'ML 교차 검증 활성화',
+      see_pro: '전문가와 상담하세요', save_scores: '수정한 점수 저장', drag_scores: '드래그하여 올바른 점수를 설정하세요', cancel: '취소',
     },
     fr: {
       tagline: 'Votre sanctuaire de soins bio',
@@ -87,6 +121,11 @@
       mission_t: 'Notre mission', mission_d: 'Rendre des soins fiables et personnalisés accessibles à tous — IA experte et produits certifiés propres.',
       vision_t: 'Notre vision', vision_d: 'Un monde où prendre soin de sa peau est simple, guidé par la science et respectueux de la planète.',
       meet_lily: 'Bonjour, je suis Lily 👋', lily_intro: 'Votre infirmière soin IA. Prête à analyser votre peau et trouver ce qui vous convient.',
+      pro_analysis: 'Analyse professionnelle de la peau', top_concerns: 'Préoccupations principales', pro_rec: 'Recommandation professionnelle',
+      accurate_q: 'Cette analyse est-elle exacte ?', feedback_train: 'Vos retours entraînent en continu l\'analyseur.',
+      rec_why: 'Pourquoi', rec_how: 'Mode d\'emploi', recommended_for: 'Recommandé pour vous',
+      new_analysis: 'Nouvelle analyse', chat_lily_btn: 'Discuter avec Lily', ml_active: 'Validation croisée ML active',
+      see_pro: 'Veuillez consulter un professionnel', save_scores: 'Enregistrer les scores corrigés', drag_scores: 'Faites glisser pour définir les bons scores', cancel: 'Annuler',
     },
     id: {
       tagline: 'Surga Perawatan Kulit Organik Anda',
@@ -107,6 +146,11 @@
       mission_t: 'Misi Kami', mission_d: 'Menjadikan perawatan kulit terpercaya dan personal dapat diakses semua orang — AI sadar dermatologi dan produk bersih bersertifikat.',
       vision_t: 'Visi Kami', vision_d: 'Dunia di mana merawat kulit itu sederhana, berbasis sains, dan ramah bumi.',
       meet_lily: 'Hai, saya Lily 👋', lily_intro: 'Perawat kulit AI Anda. Siap menganalisis kulit dan menemukan yang benar-benar cocok untuk Anda.',
+      pro_analysis: 'Analisis Kulit Profesional', top_concerns: 'Masalah Utama', pro_rec: 'Rekomendasi Profesional',
+      accurate_q: 'Apakah analisis ini akurat?', feedback_train: 'Masukan Anda terus melatih penganalisis.',
+      rec_why: 'Alasan', rec_how: 'Cara pakai', recommended_for: 'Direkomendasikan untuk Anda',
+      new_analysis: 'Analisis Baru', chat_lily_btn: 'Mengobrol dengan Lily', ml_active: 'Validasi Silang ML Aktif',
+      see_pro: 'Silakan temui profesional', save_scores: 'Simpan skor yang dikoreksi', drag_scores: 'Geser untuk menetapkan skor yang benar', cancel: 'Batal',
     },
     ja: {
       tagline: 'あなたのオーガニックスキンケアの聖域',
@@ -127,6 +171,11 @@
       mission_t: 'ミッション', mission_d: '皮膚科の知見を持つ AI とクリーンな認証製品で、信頼できるパーソナルなスキンケアをすべての人へ。',
       vision_t: 'ビジョン', vision_d: '肌のケアがシンプルで、科学に基づき、地球にやさしい世界を。',
       meet_lily: 'こんにちは、Lily です 👋', lily_intro: 'あなたの AI スキンケアナース。肌を診断し、本当に合うものを見つけます。',
+      pro_analysis: 'プロの肌分析', top_concerns: '主な悩み', pro_rec: '専門家のおすすめ',
+      accurate_q: 'この分析は正確ですか？', feedback_train: 'あなたのフィードバックが分析を継続的に改善します。',
+      rec_why: '理由', rec_how: '使い方', recommended_for: 'あなたへのおすすめ',
+      new_analysis: '新しい分析', chat_lily_btn: 'Lily と話す', ml_active: 'ML クロス検証 有効',
+      see_pro: '専門家にご相談ください', save_scores: '修正したスコアを保存', drag_scores: 'ドラッグして正しいスコアを設定', cancel: 'キャンセル',
     },
     ar: {
       tagline: 'ملاذك للعناية العضوية بالبشرة',
@@ -147,11 +196,16 @@
       mission_t: 'مهمتنا', mission_d: 'جعل العناية الموثوقة والمخصّصة بالبشرة متاحة للجميع — ذكاء اصطناعي واعٍ بالأمراض الجلدية ومنتجات نظيفة معتمدة.',
       vision_t: 'رؤيتنا', vision_d: 'عالم تكون فيه العناية بالبشرة بسيطة وقائمة على العلم ولطيفة بكوكبنا.',
       meet_lily: 'مرحبًا، أنا ليلي 👋', lily_intro: 'ممرضتك للعناية بالبشرة بالذكاء الاصطناعي. جاهزة لتحليل بشرتك وإيجاد ما يناسبك فعلًا.',
+      pro_analysis: 'تحليل احترافي للبشرة', top_concerns: 'أبرز المشكلات', pro_rec: 'توصية احترافية',
+      accurate_q: 'هل هذا التحليل دقيق؟', feedback_train: 'ملاحظاتك تدرّب المحلّل باستمرار.',
+      rec_why: 'السبب', rec_how: 'طريقة الاستخدام', recommended_for: 'موصى به لك',
+      new_analysis: 'تحليل جديد', chat_lily_btn: 'تحدّث مع ليلي', ml_active: 'التحقق المتقاطع بالذكاء الاصطناعي مفعّل',
+      see_pro: 'يرجى استشارة مختص', save_scores: 'حفظ الدرجات المصحّحة', drag_scores: 'اسحب لتحديد الدرجات الصحيحة', cancel: 'إلغاء',
     },
   };
 
   const RTL = ['ar'];
-  const LANGS = [['en', 'English'], ['zh', '中文'], ['ko', '한국어'], ['fr', 'Français'], ['id', 'Bahasa'], ['ja', '日本語'], ['ar', 'العربية']];
+  const LANGS = [['en', 'English'], ['zh', '繁體中文'], ['ko', '한국어'], ['fr', 'Français'], ['id', 'Bahasa'], ['ja', '日本語'], ['ar', 'العربية']];
 
   let lang = localStorage.getItem('pg_lang');
   if (!lang || !STRINGS[lang]) lang = (navigator.language || 'en').slice(0, 2);
@@ -159,6 +213,10 @@
 
   function t(key) {
     return (STRINGS[lang] && STRINGS[lang][key]) || STRINGS.en[key] || key;
+  }
+  // Label helper for metric / body-part / skin-type keys (falls back to English).
+  function tLabel(key, fallback) {
+    return (STRINGS[lang] && STRINGS[lang][key]) || STRINGS.en[key] || fallback || key;
   }
 
   function apply() {
@@ -176,6 +234,7 @@
     if (typeof window.onLangChange === 'function') window.onLangChange(next);
   }
 
-  window.i18n = { t, setLang, apply, LANGS, get lang() { return lang; }, isRTL: () => RTL.includes(lang) };
+  window.i18n = { t, tLabel, setLang, apply, LANGS, get lang() { return lang; }, isRTL: () => RTL.includes(lang) };
   window.t = t;
+  window.tLabel = tLabel;
 })();
