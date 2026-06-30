@@ -90,7 +90,13 @@ const PRODUCTS = [
 async function seed() {
   await connect();
 
-  for (const p of PRODUCTS) {
+  for (let i = 0; i < PRODUCTS.length; i++) {
+    const p = PRODUCTS[i];
+    // Give the sample catalogue stock photos too (storefront falls back to the
+    // emoji if an image fails to load).
+    if (!p.images || !p.images.length) {
+      p.images = [`https://loremflickr.com/600/600/skincare,cosmetics?lock=${101 + i}`];
+    }
     await Product.updateOne({ sku: p.sku }, { $set: p }, { upsert: true });
   }
   console.log(`✅ Seeded ${PRODUCTS.length} products`);
