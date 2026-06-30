@@ -8,22 +8,25 @@ to a known-good version if a new update misbehaves.
 | Tag | Commit | What it contains |
 | --- | --- | --- |
 | `v1.0.0` | `cad8794` | Stable storefront: working AI skin analysis, human-skin gate, feedback calibration, recommendations with reasons/how-to-use. **Last version before dropshipping.** |
-| `v1.1.0` | branch tip | Adds the dropshipping supplier framework (AliExpress API + Spocket/BeautyJoint feed import) + this versioning tooling. |
+| `v1.1.0` | `daad601` | Dropshipping supplier framework (AliExpress API + Spocket/BeautyJoint feed import) + versioning tooling. |
+| `v1.2.0` | branch tip | Dropshipping sourcing criteria (organic/EU/€1-10/MOQ-1), realistic demo catalogue with stock images, optional auto-SKU + duplicate-name guard, paginated searchable product **grid** (replaces carousel), real product images everywhere, admin thumbnails/search, **AI ingredient-based recommendation agent** (replaces keyword matching), admin uploads + AI label extraction, helper scripts (make-admin, db:info/backup/restore). **Snapshot before the next upgrade.** |
 
 ### Create the checkpoint tags (one-time, from your own machine)
 
-The tags couldn't be pushed from the build environment (its GitHub access is
-scoped to the branch). Run this once locally to publish them:
+Tags can't be pushed from the build environment (its GitHub access is scoped to
+the branch). Run this once locally to publish them:
 
 ```bash
 git fetch origin
 git tag -a v1.0.0 cad8794 -m "Stable storefront before dropshipping"
-git tag -a v1.1.0 origin/claude/shop-app-commercialize-j0yc77 -m "Dropshipping milestone"
-git push origin v1.0.0 v1.1.0
+git tag -a v1.1.0 daad601 -m "Dropshipping milestone"
+git tag -a v1.2.0 origin/claude/shop-app-commercialize-j0yc77 -m "Demo catalogue, grid UI, AI recommender — snapshot before next upgrade"
+git push origin v1.0.0 v1.1.0 v1.2.0
 ```
 
-Even without tags, **every commit is a restore point** — `cad8794` is your
-pre-dropshipping rollback target.
+Even without tags, **every commit is a restore point**. The v1.2.0 snapshot is
+the current branch tip (commit shown by `git log --oneline -1` / `/api/version`);
+`cad8794` is the pre-dropshipping rollback target.
 
 List every checkpoint at any time:
 
