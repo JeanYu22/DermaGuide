@@ -7,6 +7,7 @@ const Analysis = require('../models/Analysis');
 const Feedback = require('../models/Feedback');
 const analyzer = require('../services/agents/analyzer');
 const reviewer = require('../services/agents/reviewer');
+const recommender = require('../services/agents/recommender');
 const calibration = require('../services/calibration');
 const { asyncHandler } = require('../middleware/errorHandler');
 
@@ -44,6 +45,36 @@ function recommendFor(parsed, products) {
       : `A good all-round pick for ${parsed.skinType || 'your'} skin`;
     return { ...p, reason };
   });
+}
+
+/** Retrieve a candidate set (by concern/type) for the AI recommender to rerank. */
+function candidatesFor(a, products, n = 12) {
+  const concernList = (a.topConcerns || '').toLowerCase().split(',').map((c) => c.trim());
+  const matchesConcern = (p) => p.concerns.some((c) => concernList.some((cc) => cc.includes(c) || c.includes(cc)));
+
+  let recs = products.filter(matchesConcern);
+  if (recs.length < n) {
+    const byType = products.filter((p) => !recs.includes(p) && (p.types?.includes('all') || p.types?.includes(a.skinType)));
+    recs = [...recs, ...byType];
+  }
+  if (recs.length < n) recs = [...recs, ...products.filter((p) => !recs.includes(p))];
+  return recs.slice(0, n);
+}
+
+/**
+ * Build recommendations: retrieve candidates by concern, then let the AI
+ * recommender rerank/explain by ingredient. Falls back to keyword matching if
+ * the model is unavailable or returns nothing usable.
+ */
+async function buildRecommendations(analysisLike, products) {
+  const candidates = candidatesFor(analysisLike, products, 12);
+  try {
+    const ai = await recommender.recommend(analysisLike, candidates);
+    if (ai.length) return ai;
+  } catch (err) {
+    console.warn('recommender failed, using keyword fallback:', err.message);
+  }
+  return recommendFor(analysisLike, products);
 }
 
 /**
@@ -113,7 +144,10 @@ router.post(
     }
 
     const products = (await Product.find({ active: true })).map((p) => p.toStorefront());
-    const recommended = recommendFor({ topConcerns, skinType: parsed.skinType }, products);
+    const recommended = await buildRecommendations(
+      { bodyPart: parsed.bodyPart, skinType: parsed.skinType, topConcerns, metrics },
+      products
+    );
 
     // Optional ML cross-validation summary sent from the browser TF pass.
     // Coerce defensively — values may arrive as arrays/typed-arrays from
@@ -224,7 +258,10 @@ router.post(
     }).catch(() => {});
 
     const products = (await Product.find({ active: true })).map((p) => p.toStorefront());
-    const recommended = recommendFor({ topConcerns: record.topConcerns, skinType: record.skinType }, products);
+    const recommended = await buildRecommendations(
+      { bodyPart: record.bodyPart, skinType: record.skinType, topConcerns: record.topConcerns, metrics: corrected },
+      products
+    );
 
     res.json({
       analysisId: record._id.toString(),
