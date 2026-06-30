@@ -431,7 +431,7 @@ async function changeQty(productId, quantity) {
   } catch (err) { toast(err.message); }
 }
 
-function openCheckout() {
+async function openCheckout() {
   document.querySelectorAll('.modal.cart-modal').forEach((m) => m.remove());
   const modal = document.createElement('div');
   modal.className = 'modal';
@@ -444,12 +444,86 @@ function openCheckout() {
         <div class="form-group"><label class="form-label">Address</label><input class="form-input" id="coLine1" placeholder="Street address"></div>
         <div class="form-group"><label class="form-label">City</label><input class="form-input" id="coCity"></div>
         <div class="form-group"><label class="form-label">Postal Code</label><input class="form-input" id="coZip"></div>
-        <p style="font-size:.8rem;opacity:.6;margin-bottom:1rem;">💳 Demo checkout — payment is simulated, no card required.</p>
         <div class="form-error" id="coError"></div>
-        <button class="btn btn-primary btn-full" id="coSubmit" onclick="submitCheckout(this)">Place Order</button>
+        <div id="payArea"><div class="empty-state">Loading payment options…</div></div>
       </div>
     </div>`;
   document.body.appendChild(modal);
+  await renderPaymentOptions();
+}
+
+function shippingAddressFromForm() {
+  return {
+    name: document.getElementById('coName').value.trim(),
+    line1: document.getElementById('coLine1').value.trim(),
+    city: document.getElementById('coCity').value.trim(),
+    postalCode: document.getElementById('coZip').value.trim(),
+  };
+}
+
+async function renderPaymentOptions() {
+  const area = document.getElementById('payArea');
+  let cfg = {};
+  try { cfg = await api('/payments/config'); } catch (_) { /* fall back to demo */ }
+
+  if (cfg.paypal && cfg.paypal.enabled && cfg.paypal.clientId) {
+    area.innerHTML = `
+      <p style="font-size:.82rem;opacity:.7;margin-bottom:.8rem;">Pay with PayPal or credit/debit card:</p>
+      <div id="paypal-buttons"></div>`;
+    loadPayPalSdk(cfg.paypal.clientId, cfg.paypal.currency).then(renderPayPalButtons).catch(() => {
+      area.innerHTML = demoCheckoutHTML();
+    });
+  } else {
+    area.innerHTML = demoCheckoutHTML();
+  }
+}
+
+function demoCheckoutHTML() {
+  return `<p style="font-size:.8rem;opacity:.6;margin-bottom:1rem;">💳 Demo checkout — payment is simulated (PayPal not configured).</p>
+    <button class="btn btn-primary btn-full" onclick="submitCheckout(this)">Place Order</button>`;
+}
+
+let paypalSdkPromise = null;
+function loadPayPalSdk(clientId, currency) {
+  if (window.paypal) return Promise.resolve();
+  if (paypalSdkPromise) return paypalSdkPromise;
+  paypalSdkPromise = new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = `https://www.paypal.com/sdk/js?client-id=${encodeURIComponent(clientId)}&currency=${encodeURIComponent(currency || 'USD')}&enable-funding=card`;
+    s.onload = resolve;
+    s.onerror = reject;
+    document.head.appendChild(s);
+  });
+  return paypalSdkPromise;
+}
+
+function renderPayPalButtons() {
+  if (!window.paypal) return;
+  window.paypal.Buttons({
+    style: { layout: 'vertical', color: 'gold', shape: 'pill', label: 'paypal' },
+    createOrder: async () => {
+      const { id } = await api('/payments/paypal/create-order', { method: 'POST', body: {} });
+      return id;
+    },
+    onApprove: async (data) => {
+      try {
+        const { order } = await api('/payments/paypal/capture', {
+          method: 'POST',
+          body: { orderID: data.orderID, shippingAddress: shippingAddressFromForm() },
+        });
+        document.querySelectorAll('.modal').forEach((m) => m.remove());
+        State.cartCount = 0; updateCartCount();
+        toast(`Payment complete! 🎉 Order $${order.total.toFixed(2)}`);
+      } catch (err) {
+        document.getElementById('coError').textContent = err.message;
+      }
+    },
+    onError: (err) => {
+      const el = document.getElementById('coError');
+      if (el) el.textContent = 'Payment error. Please try again.';
+      console.error('PayPal error:', err);
+    },
+  }).render('#paypal-buttons');
 }
 
 async function submitCheckout(btn) {

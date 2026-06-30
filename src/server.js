@@ -56,6 +56,7 @@ app.use('/api/auth', require('./routes/auth'));
 app.use('/api/products', require('./routes/products'));
 app.use('/api/cart', require('./routes/cart').router);
 app.use('/api/orders', require('./routes/orders'));
+app.use('/api/payments', require('./routes/payments'));
 app.use('/api/chat', aiLimiter, require('./routes/chat'));
 app.use('/api/analysis', aiLimiter, require('./routes/analysis'));
 app.use('/api/feedback', require('./routes/feedback'));

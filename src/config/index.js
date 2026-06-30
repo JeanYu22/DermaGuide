@@ -40,6 +40,14 @@ const config = {
     password: process.env.ADMIN_PASSWORD || 'ChangeMe123!',
   },
 
+  // Payments — PayPal (Smart Buttons cover PayPal + credit/debit card).
+  paypal: {
+    clientId: process.env.PAYPAL_CLIENT_ID || '',
+    secret: process.env.PAYPAL_SECRET || '',
+    env: (process.env.PAYPAL_ENV || 'sandbox').toLowerCase(), // sandbox | live
+    currency: process.env.PAYPAL_CURRENCY || 'USD',
+  },
+
   // AliExpress Dropshipping (Alibaba Open Platform) credentials.
   aliexpress: {
     appKey: process.env.ALIEXPRESS_APP_KEY || '',
