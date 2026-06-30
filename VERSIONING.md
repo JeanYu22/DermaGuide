@@ -20,7 +20,7 @@ the branch). Run this once locally to publish them:
 git fetch origin
 git tag -a v1.0.0 cad8794 -m "Stable storefront before dropshipping"
 git tag -a v1.1.0 daad601 -m "Dropshipping milestone"
-git tag -a v1.2.0 origin/claude/shop-app-commercialize-j0yc77 -m "Demo catalogue, grid UI, AI recommender — snapshot before next upgrade"
+git tag -a v1.2.0 origin/claude/shop-app-commercialize-j0yc77 -m "Shop Product demo built"
 git push origin v1.0.0 v1.1.0 v1.2.0
 ```
 
