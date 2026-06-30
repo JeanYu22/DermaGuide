@@ -256,7 +256,7 @@ function clearAuth() {
 }
 function updateAuthUI() {
   const link = document.getElementById('authLink');
-  link.textContent = State.user ? `Hi, ${State.user.name || State.user.email.split('@')[0]} ▾` : 'Sign In';
+  link.textContent = State.user ? `Hi, ${State.user.name || State.user.email.split('@')[0]} ▾` : (window.t ? window.t('sign_in') : 'Sign In');
 }
 
 function openAuth() {
@@ -1308,7 +1308,40 @@ function bindUploadZone() {
   if (zone && input) zone.onclick = () => input.click();
 }
 
+// ===========================================================================
+// Language switcher (i18n)
+// ===========================================================================
+function renderLangSwitch(containerId) {
+  const el = document.getElementById(containerId);
+  if (!el || !window.i18n) return;
+  const cur = window.i18n.lang;
+  const curLabel = (window.i18n.LANGS.find((l) => l[0] === cur) || ['en', 'English'])[1];
+  el.innerHTML = `<button class="lang-btn" onclick="toggleLangMenu(event,'${containerId}')">🌐 ${curLabel}</button>
+    <div class="lang-menu" id="menu-${containerId}">
+      ${window.i18n.LANGS.map(([code, label]) => `<button class="lang-option ${code === cur ? 'active' : ''}" onclick="window.i18n.setLang('${code}'); closeLangMenus()">${label}</button>`).join('')}
+    </div>`;
+}
+function toggleLangMenu(e, id) {
+  e.stopPropagation();
+  const m = document.getElementById('menu-' + id);
+  document.querySelectorAll('.lang-menu').forEach((x) => { if (x !== m) x.classList.remove('open'); });
+  m.classList.toggle('open');
+}
+function closeLangMenus() { document.querySelectorAll('.lang-menu').forEach((x) => x.classList.remove('open')); }
+document.addEventListener('click', closeLangMenus);
+
+// Re-apply translations + refresh dynamic chrome when the language changes.
+window.onLangChange = function () {
+  if (window.i18n) window.i18n.apply();
+  updateAuthUI(); // restore "Hi, name" for logged-in users (apply() would set Sign In)
+  renderLangSwitch('landingLang');
+  renderLangSwitch('headerLang');
+};
+
 async function init() {
+  if (window.i18n) window.i18n.apply();
+  renderLangSwitch('landingLang');
+  renderLangSwitch('headerLang');
   updateAuthUI();
   renderTips();
   renderFilterChips();

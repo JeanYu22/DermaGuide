@@ -13,12 +13,44 @@
 <body>
     <!-- Landing -->
     <div class="landing" id="landing">
-        <div class="landing-logo">🌿</div>
-        <h1 class="landing-title">PureGlow</h1>
-        <p class="landing-subtitle">Your Organic Skincare Sanctuary</p>
-        <div class="landing-buttons">
-            <button class="btn btn-primary" onclick="enterShop()">Enter Store</button>
-            <button class="btn btn-secondary" onclick="quickAnalyze()">Quick Skin Analysis</button>
+        <div class="lang-switch" id="landingLang"></div>
+        <div class="landing-inner">
+            <section class="hero">
+                <div class="hero-copy">
+                    <div class="hero-brand">🌿 PureGlow</div>
+                    <h1 class="hero-title" data-i18n="hero_title">Know your skin. Care with confidence.</h1>
+                    <p class="hero-sub" data-i18n="hero_sub">AI-powered skin analysis and personalised organic skincare — guided by Lily, your virtual consultant.</p>
+                    <div class="hero-buttons">
+                        <button class="btn btn-primary" onclick="enterShop()" data-i18n="get_started">Get Started</button>
+                        <button class="btn btn-secondary" onclick="quickAnalyze()" data-i18n="quick_analysis">Quick Skin Analysis</button>
+                    </div>
+                </div>
+                <!-- Stylized animated "AI nurse" avatar -->
+                <div class="nurse" aria-hidden="true">
+                    <div class="nurse-orbit"></div>
+                    <div class="nurse-avatar">
+                        <div class="nurse-face">👩‍⚕️</div>
+                        <div class="nurse-pulse"></div>
+                    </div>
+                    <div class="nurse-bubble">
+                        <div class="nurse-bubble-title" data-i18n="meet_lily">Hi, I'm Lily 👋</div>
+                        <div class="nurse-bubble-text" data-i18n="lily_intro">Your AI skincare nurse.</div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="benefits">
+                <div class="benefit-card"><div class="benefit-icon">📸</div><h3 data-i18n="benefit1_t">Analyze any skin</h3><p data-i18n="benefit1_d">Snap a photo of your face, hands, legs or back.</p></div>
+                <div class="benefit-card"><div class="benefit-icon">🧴</div><h3 data-i18n="benefit2_t">Personalised picks</h3><p data-i18n="benefit2_d">Organic, vegan products chosen for your concerns.</p></div>
+                <div class="benefit-card"><div class="benefit-icon">💬</div><h3 data-i18n="benefit3_t">Talk to Lily</h3><p data-i18n="benefit3_d">Chat anytime with your AI skincare consultant.</p></div>
+            </section>
+
+            <section class="mv">
+                <div class="mv-card"><h3 data-i18n="mission_t">Our Mission</h3><p data-i18n="mission_d">Make trustworthy, personalised skincare accessible to everyone.</p></div>
+                <div class="mv-card"><h3 data-i18n="vision_t">Our Vision</h3><p data-i18n="vision_d">A world where caring for your skin is simple and science-guided.</p></div>
+            </section>
+
+            <button class="btn btn-primary landing-cta" onclick="enterShop()" data-i18n="enter_store">Enter Store</button>
         </div>
     </div>
 
@@ -28,22 +60,23 @@
             <div class="header-content">
                 <div class="brand">🌿 PureGlow</div>
                 <div class="header-actions">
-                    <button class="header-link" id="authLink" onclick="openAuth()">Sign In</button>
+                    <div class="lang-switch" id="headerLang"></div>
+                    <button class="header-link" id="authLink" onclick="openAuth()" data-i18n="sign_in">Sign In</button>
                     <button class="header-icon" onclick="openCart()">🛒<span class="cart-count" id="cartCount" data-count="0"></span></button>
                 </div>
             </div>
         </div>
 
         <div class="quick-actions">
-            <div class="action-card" onclick="openChat()"><div class="action-icon">💬</div><div class="action-title">Consultation</div></div>
-            <div class="action-card" onclick="openAnalyzer()"><div class="action-icon">📸</div><div class="action-title">Skin Scan</div></div>
-            <div class="action-card" onclick="scrollToTips()"><div class="action-icon">💡</div><div class="action-title">Skincare Tips</div></div>
-            <div class="action-card" onclick="scrollToProducts()"><div class="action-icon">🛍️</div><div class="action-title">Shop All</div></div>
+            <div class="action-card" onclick="openChat()"><div class="action-icon">💬</div><div class="action-title" data-i18n="qa_consult">Consultation</div></div>
+            <div class="action-card" onclick="openAnalyzer()"><div class="action-icon">📸</div><div class="action-title" data-i18n="qa_scan">Skin Scan</div></div>
+            <div class="action-card" onclick="scrollToTips()"><div class="action-icon">💡</div><div class="action-title" data-i18n="qa_tips">Skincare Tips</div></div>
+            <div class="action-card" onclick="scrollToProducts()"><div class="action-icon">🛍️</div><div class="action-title" data-i18n="qa_shopall">Shop All</div></div>
         </div>
 
         <div class="section-header">
-            <h2 class="section-title">Shop Products</h2>
-            <input type="search" class="shop-search" id="shopSearch" placeholder="🔍 Search products…">
+            <h2 class="section-title" data-i18n="shop_title">Shop Products</h2>
+            <input type="search" class="shop-search" id="shopSearch" placeholder="🔍 Search products…" data-i18n-ph="search_ph">
             <div class="filter-chips" id="filterChips"></div>
             <p class="shop-count" id="shopCount"></p>
         </div>
@@ -53,14 +86,14 @@
         </div>
 
         <div class="section-header" style="margin-top: 2rem;" id="tipsSection">
-            <h2 class="section-title">Expert Tips</h2>
+            <h2 class="section-title" data-i18n="tips_title">Expert Tips</h2>
         </div>
         <div class="tips-grid" id="tipsGrid"></div>
 
         <div class="bottom-nav">
-            <div class="nav-item" onclick="scrollToProducts()"><div class="nav-icon">🏠</div><div class="nav-label">Shop</div></div>
-            <div class="nav-item" onclick="openChat()"><div class="nav-icon">💬</div><div class="nav-label">Chat</div></div>
-            <div class="nav-item" onclick="openAnalyzer()"><div class="nav-icon">📸</div><div class="nav-label">Analyze</div></div>
+            <div class="nav-item" onclick="scrollToProducts()"><div class="nav-icon">🏠</div><div class="nav-label" data-i18n="nav_shop">Shop</div></div>
+            <div class="nav-item" onclick="openChat()"><div class="nav-icon">💬</div><div class="nav-label" data-i18n="nav_chat">Chat</div></div>
+            <div class="nav-item" onclick="openAnalyzer()"><div class="nav-icon">📸</div><div class="nav-label" data-i18n="nav_analyze">Analyze</div></div>
         </div>
 
         <div class="ai-assistant" id="aiAssistant">
@@ -80,7 +113,7 @@
     <div class="chat-modal" id="chatModal">
         <div class="chat-header">
             <button class="back-btn" onclick="closeChat()">←</button>
-            <div class="chat-title">👩‍⚕️ Lily - Skincare Consultant</div>
+            <div class="chat-title">👩‍⚕️ <span data-i18n="chat_title">Lily · Skincare Consultant</span></div>
         </div>
         <div class="chat-messages" id="chatMessages">
             <div class="message assistant">
@@ -93,7 +126,7 @@
         </div>
         <div class="chat-input-area">
             <div class="chat-input-row">
-                <input type="text" class="chat-input" id="chatInput" placeholder="Type your message...">
+                <input type="text" class="chat-input" id="chatInput" placeholder="Type your message..." data-i18n-ph="chat_ph">
                 <button class="chat-action-btn analyze-btn" onclick="triggerChatImageUpload()" title="Analyze skin photo">📸</button>
                 <button class="chat-action-btn send-btn" id="sendBtn" onclick="sendMessage()">➤</button>
             </div>
@@ -105,13 +138,13 @@
     <div class="analyzer-modal" id="analyzerModal">
         <div class="chat-header">
             <button class="back-btn" onclick="closeAnalyzer()">←</button>
-            <div class="chat-title">AI Skin Analysis</div>
+            <div class="chat-title" data-i18n="analyzer_title">AI Skin Analysis</div>
         </div>
         <div class="analyzer-content" id="analyzerContent">
             <div class="upload-zone" id="uploadZone">
                 <div class="upload-icon">📸</div>
-                <h3 class="upload-title">Upload Your Photo</h3>
-                <p class="upload-text">Face, hands, arms, legs - any body part!</p>
+                <h3 class="upload-title" data-i18n="upload_title">Upload Your Photo</h3>
+                <p class="upload-text" data-i18n="upload_text">Face, hands, arms, legs - any body part!</p>
                 <input type="file" id="fileInput" accept="image/*" capture="user" style="display:none;" onchange="handleImage(event)">
             </div>
         </div>
@@ -127,6 +160,7 @@
         <div class="admin-content" id="adminContent"></div>
     </div>
 
+    <script src="/js/i18n.js"></script>
     <script src="/js/ml.js"></script>
     <script src="/js/app.js"></script>
 </body>
