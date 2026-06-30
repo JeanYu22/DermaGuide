@@ -287,24 +287,46 @@ function calculateQualityScore(concerns) {
 }
 
 // ---------------------------------------------------------------------------
-// Radar chart with optional ML cross-validation overlay
+// Radar chart with optional ML cross-validation overlay.
+//
+// metricDefs: [{ key, label }] — body-part-specific axes (variable length).
+// mlResults:  only passed for FACE analyses (ML cross-check is face-only).
 // ---------------------------------------------------------------------------
-function drawRadarChart(canvasId, metrics, skinType, mlResults = null) {
+// Map an ML pixel-concern to a face metric key (ML only covers face metrics).
+function mlValueForKey(key, c) {
+  switch (key) {
+    case 'dryness': return c.dryness || 0;
+    case 'dehydration': return (c.dryness || 0) * 0.8;
+    case 'wrinkles': return c.wrinkles || 0;
+    case 'sagging': return c.sagging || 0;
+    case 'sensitivity': return c.sensitivity || 0;
+    case 'redness': return c.redness || 0;
+    case 'blockedPores': return (c.texture || 0) * 0.9;
+    case 'enlargedPores': return (c.texture || 0) * 0.8;
+    case 'acne': return c.texture || 0;
+    case 'pigmentation': return c.pigmentation || 0;
+    default: return null; // non-face metric → no ML estimate
+  }
+}
+
+function drawRadarChart(canvasId, metrics, metricDefs, mlResults = null) {
   const canvas = document.getElementById(canvasId);
   if (!canvas) return;
+  // Back-compat: if metricDefs is a string (old skinType arg), default to face keys.
+  if (!Array.isArray(metricDefs)) {
+    metricDefs = ['dryness', 'dehydration', 'wrinkles', 'sagging', 'sensitivity', 'redness', 'blockedPores', 'enlargedPores', 'acne', 'pigmentation']
+      .map((k) => ({ key: k, label: k.replace(/([A-Z])/g, ' $1').replace(/^./, (s) => s.toUpperCase()) }));
+  }
   const ctx = canvas.getContext('2d');
-  const cx = 200, cy = 200, maxR = 150, n = 10;
+  const cx = 200, cy = 200, maxR = 150, n = metricDefs.length;
   ctx.clearRect(0, 0, 400, 400);
 
-  const labels = ['Dryness', 'Dehydration', 'Wrinkles', 'Sagging', 'Sensitivity', 'Redness', 'Blocked Pores', 'Enlarged Pores', 'Acne', 'Pigmentation'];
-  const llm = [metrics.dryness || 0, metrics.dehydration || 0, metrics.wrinkles || 0, metrics.sagging || 0, metrics.sensitivity || 0,
-    metrics.redness || 0, metrics.blockedPores || 0, metrics.enlargedPores || 0, metrics.acne || 0, metrics.pigmentation || 0];
+  const labels = metricDefs.map((d) => d.label);
+  const llm = metricDefs.map((d) => metrics[d.key] || 0);
 
   let ml = null;
   if (mlResults && mlResults.mlConcerns) {
-    const c = mlResults.mlConcerns;
-    ml = [c.dryness || 0, (c.dryness || 0) * 0.8, c.wrinkles || 0, c.sagging || 0, c.sensitivity || 0,
-      c.redness || 0, (c.texture || 0) * 0.9, (c.texture || 0) * 0.8, c.texture || 0, c.pigmentation || 0];
+    ml = metricDefs.map((d) => mlValueForKey(d.key, mlResults.mlConcerns));
   }
 
   ctx.strokeStyle = '#E8DCC4'; ctx.lineWidth = 1;

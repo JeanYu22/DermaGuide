@@ -658,12 +658,26 @@ async function handleChatImage(event) {
   }
 }
 
-function metricsGridHTML(metrics) {
-  return Object.entries(metrics).map(([key, value]) => {
-    const label = key.replace(/([A-Z])/g, ' $1').replace(/^./, (s) => s.toUpperCase());
+function metricsGridHTML(metrics, metricDefs) {
+  const defs = metricDefs && metricDefs.length
+    ? metricDefs
+    : Object.keys(metrics).map((k) => ({ key: k, label: k.replace(/([A-Z])/g, ' $1').replace(/^./, (s) => s.toUpperCase()) }));
+  return defs.map(({ key, label }) => {
+    const value = metrics[key] || 0;
     const severity = value < 4 ? 'low' : value < 7 ? 'medium' : 'high';
     return `<div class="metric-item"><span class="metric-label">${label}</span><span class="metric-score severity-${severity}">${value}/10</span></div>`;
   }).join('');
+}
+
+// Prominent banner when the AI flags a condition needing a professional.
+function medicalBannerHTML(result) {
+  if (!result.medicalFlag) return '';
+  const advice = result.medicalAdvice || 'Some signs here may need a doctor or dermatologist. Please consult a professional for a proper diagnosis.';
+  return `<div style="margin:1rem 0;padding:1rem;border-radius:12px;background:linear-gradient(135deg,#ffebee,#ffcdd2);border:2px solid #e53935;">
+    <div style="display:flex;align-items:center;gap:.5rem;font-weight:700;color:#c62828;margin-bottom:.3rem;"><span style="font-size:1.3rem;">⚕️</span> Please see a professional</div>
+    <div style="font-size:.9rem;color:#5d4037;">${advice}</div>
+    <div style="font-size:.75rem;color:#8d6e63;margin-top:.4rem;">This app provides cosmetic guidance only and is not a medical diagnosis.</div>
+  </div>`;
 }
 
 function recCarouselHTML(title, recs) {
@@ -674,25 +688,34 @@ function recCarouselHTML(title, recs) {
   </div></div>`;
 }
 
-/** Detailed recommendations: reason + how-to-use beneath each product. */
+/**
+ * Detailed recommendations — HORIZONTAL scroll of cards with a large product
+ * image (≥ shop card size), keeping the "Why" + "How to use".
+ */
 function recDetailHTML(title, recs) {
   return `<div class="rec-products"><div class="rec-title">${title}</div>
-    ${recs.map((p) => `<div class="rec-detail" onclick='showProductModal(${JSON.stringify(p).replace(/'/g, "&#39;")})'>
-      <div class="rec-detail-head">
-        <div class="rec-emoji" style="margin:0;">${recThumb(p)}</div>
-        <div style="flex:1;"><div class="rec-name">${p.name}</div><div class="rec-price">$${p.price.toFixed(2)}</div></div>
-        <span style="font-size:.75rem;color:var(--sage);">Tap for details ›</span>
-      </div>
-      ${p.reason ? `<div class="rec-reason">💡 <strong>Why:</strong> ${p.reason}</div>` : ''}
-      ${p.howToUse ? `<div class="rec-howto">📋 <strong>How to use:</strong> ${p.howToUse}</div>` : ''}
-    </div>`).join('')}
+    <div class="rec-hscroll">
+      ${recs.map((p) => `<div class="rec-vcard" onclick='showProductModal(${JSON.stringify(p).replace(/'/g, "&#39;")})'>
+        <div class="rec-vcard-img">${p.images && p.images.length
+          ? `<img src="${p.images[0]}" loading="lazy" onerror="${imgFallback(p.emoji, 'product-emoji')}">`
+          : `<span class="product-emoji">${p.emoji || '🧴'}</span>`}</div>
+        <div class="rec-vcard-body">
+          <div class="rec-name">${p.name}</div>
+          <div class="rec-price">$${p.price.toFixed(2)}</div>
+          ${p.reason ? `<div class="rec-reason">💡 <strong>Why:</strong> ${p.reason}</div>` : ''}
+          ${p.howToUse ? `<div class="rec-howto">📋 <strong>How to use:</strong> ${p.howToUse}</div>` : ''}
+        </div>
+      </div>`).join('')}
+    </div>
   </div>`;
 }
 
 function displayChatAnalysis(result, mlResults) {
-  const { analysisId, bodyPart, skinType, metrics, topConcerns, recommendation, recommendedProducts } = result;
+  const { analysisId, bodyPart, skinType, metrics, topConcerns, recommendation, recommendedProducts, metricDefs } = result;
+  // ML cross-check is FACE ONLY.
+  const ml = result.isFace ? mlResults : null;
   const canvasId = 'canvas-' + analysisId;
-  analysisStore[analysisId] = { metrics, skinType, mlResults, canvasId };
+  analysisStore[analysisId] = { metrics, skinType, mlResults: ml, canvasId, metricDefs };
   const container = document.getElementById('chatMessages');
   const div = document.createElement('div');
   div.className = 'message assistant';
@@ -702,14 +725,15 @@ function displayChatAnalysis(result, mlResults) {
       <div class="pro-analysis">
         <div class="analysis-header"><h3>Professional Skin Analysis</h3>
           <div class="analysis-subtitle">${cap(bodyPart)} - ${cap(skinType)} Skin</div></div>
+        ${medicalBannerHTML(result)}
         <div class="radar-container"><canvas id="${canvasId}" width="400" height="400"></canvas></div>
-        <div class="metrics-grid" id="grid-${analysisId}">${metricsGridHTML(metrics)}</div>
+        <div class="metrics-grid" id="grid-${analysisId}">${metricsGridHTML(metrics, metricDefs)}</div>
         <div class="analysis-summary"><div class="summary-title">Top Concerns</div><div>${topConcerns}</div></div>
         <div class="analysis-summary"><div class="summary-title">Professional Recommendation</div><div>${recommendation || '—'}</div></div>
-        ${mlResults && mlResults.mlConcerns ? `<div class="ml-status-box"><div style="display:flex;align-items:center;gap:.5rem;font-size:.9rem;">
+        ${ml && ml.mlConcerns ? `<div class="ml-status-box"><div style="display:flex;align-items:center;gap:.5rem;font-size:.9rem;">
           <span>✅</span><span class="ml-status-title">ML Cross-Validation Active</span>
-          <span class="ml-confidence-badge">${Math.round((mlResults.confidence || 0) * 100)}% confidence</span></div>
-          <div class="ml-status-desc">Light green overlay shows ML-detected metrics for comparison</div></div>` : ''}
+          <span class="ml-confidence-badge">${Math.round((ml.confidence || 0) * 100)}% confidence</span></div>
+          <div class="ml-status-desc">Light green overlay shows ML-detected metrics for comparison (face only)</div></div>` : ''}
         ${feedbackSectionHTML(analysisId)}
       </div>
       <div style="margin-top:1rem;color:var(--sage);font-size:.95rem;">💬 What would you like to know about treating these concerns?</div>
@@ -717,7 +741,7 @@ function displayChatAnalysis(result, mlResults) {
   container.appendChild(div);
   if (recommendedProducts?.length) container.appendChild(wrapMessage(recDetailHTML(`Recommended for your ${bodyPart}:`, recommendedProducts)));
   container.scrollTop = container.scrollHeight;
-  setTimeout(() => drawRadarChart(canvasId, metrics, skinType, mlResults), 300);
+  setTimeout(() => drawRadarChart(canvasId, metrics, metricDefs, ml), 300);
 }
 
 function wrapMessage(innerHTML) {
@@ -754,17 +778,22 @@ async function confirmAnalysis(analysisId) {
 // User opens the score-correction panel (sliders pre-filled with current values).
 function adjustAnalysis(analysisId) {
   const section = document.getElementById('feedback-' + analysisId);
-  const metrics = analysisStore[analysisId]?.metrics || {};
+  const store = analysisStore[analysisId] || {};
+  const metrics = store.metrics || {};
+  // Use this analysis's body-part-specific metric set.
+  const defs = (store.metricDefs && store.metricDefs.length)
+    ? store.metricDefs
+    : Object.keys(metrics).map((k) => ({ key: k, label: k.replace(/([A-Z])/g, ' $1').replace(/^./, (s) => s.toUpperCase()) }));
   section.innerHTML = `
     <div class="feedback-title">Drag to set the correct scores</div>
     <div>
-      ${METRIC_ORDER.map(([k, l]) => {
-        const v = metrics[k] ?? 0;
+      ${defs.map(({ key, label }) => {
+        const v = metrics[key] ?? 0;
         return `<div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.45rem;">
-          <span style="width:108px;font-size:.78rem;">${l}</span>
-          <input type="range" min="0" max="10" value="${v}" data-key="${k}" style="flex:1;"
-            oninput="document.getElementById('val-${analysisId}-${k}').textContent=this.value">
-          <span id="val-${analysisId}-${k}" style="width:22px;text-align:right;font-weight:700;color:var(--forest);">${v}</span>
+          <span style="width:120px;font-size:.78rem;">${label}</span>
+          <input type="range" min="0" max="10" value="${v}" data-key="${key}" style="flex:1;"
+            oninput="document.getElementById('val-${analysisId}-${key}').textContent=this.value">
+          <span id="val-${analysisId}-${key}" style="width:22px;text-align:right;font-weight:700;color:var(--forest);">${v}</span>
         </div>`;
       }).join('')}
     </div>
@@ -792,10 +821,12 @@ async function submitCorrection(analysisId, btn) {
     // Redraw chart + metric grid in place with the corrected values.
     const ctx = analysisStore[analysisId] || {};
     ctx.metrics = result.metrics;
+    const defs = result.metricDefs || ctx.metricDefs;
+    ctx.metricDefs = defs;
     analysisStore[analysisId] = ctx;
     const grid = document.getElementById('grid-' + analysisId);
-    if (grid) grid.innerHTML = metricsGridHTML(result.metrics);
-    if (ctx.canvasId) drawRadarChart(ctx.canvasId, result.metrics, result.skinType || ctx.skinType, ctx.mlResults);
+    if (grid) grid.innerHTML = metricsGridHTML(result.metrics, defs);
+    if (ctx.canvasId) drawRadarChart(ctx.canvasId, result.metrics, defs, ctx.mlResults);
 
     section.innerHTML = `<div style="text-align:center;padding:1rem;color:var(--forest);">
       <div style="font-size:1.7rem;">🧠✅</div><div style="font-weight:600;">Saved — thank you!</div>
@@ -858,19 +889,21 @@ async function handleImage(event) {
 }
 
 function displayStandaloneAnalysis(result, imgSrc, mlResults) {
-  const { analysisId, bodyPart, skinType, metrics, topConcerns, recommendation, recommendedProducts } = result;
+  const { analysisId, bodyPart, skinType, metrics, topConcerns, recommendation, recommendedProducts, metricDefs } = result;
+  const ml = result.isFace ? mlResults : null; // ML cross-check is face only
   const canvasId = 'canvas-' + analysisId;
-  analysisStore[analysisId] = { metrics, skinType, mlResults, canvasId };
+  analysisStore[analysisId] = { metrics, skinType, mlResults: ml, canvasId, metricDefs };
   const content = document.getElementById('analyzerContent');
   content.innerHTML = `
     <img src="${imgSrc}" class="preview-img">
     <div class="pro-analysis">
       <div class="analysis-header"><h3>Professional Skin Analysis</h3><div class="analysis-subtitle">${cap(bodyPart)} - ${cap(skinType)} Skin</div></div>
+      ${medicalBannerHTML(result)}
       <div class="radar-container"><canvas id="${canvasId}" width="400" height="400"></canvas></div>
-      <div class="metrics-grid" id="grid-${analysisId}">${metricsGridHTML(metrics)}</div>
+      <div class="metrics-grid" id="grid-${analysisId}">${metricsGridHTML(metrics, metricDefs)}</div>
       <div class="analysis-summary"><div class="summary-title">Top Concerns</div><div>${topConcerns}</div></div>
       <div class="analysis-summary"><div class="summary-title">Professional Recommendation</div><div>${recommendation || '—'}</div></div>
-      ${mlResults && mlResults.mlConcerns ? `<div class="ml-status-box"><div style="display:flex;align-items:center;gap:.5rem;font-size:.9rem;"><span>✅</span><span class="ml-status-title">ML Cross-Validation Active</span><span class="ml-confidence-badge">${Math.round((mlResults.confidence || 0) * 100)}% confidence</span></div></div>` : ''}
+      ${ml && ml.mlConcerns ? `<div class="ml-status-box"><div style="display:flex;align-items:center;gap:.5rem;font-size:.9rem;"><span>✅</span><span class="ml-status-title">ML Cross-Validation Active</span><span class="ml-confidence-badge">${Math.round((ml.confidence || 0) * 100)}% confidence</span></div></div>` : ''}
       ${feedbackSectionHTML(analysisId)}
       ${recommendedProducts?.length ? recDetailHTML(`Top products for your ${bodyPart}:`, recommendedProducts) : ''}
       <div style="margin-top:1.5rem;display:flex;gap:1rem;flex-wrap:wrap;">
@@ -878,7 +911,7 @@ function displayStandaloneAnalysis(result, imgSrc, mlResults) {
         <button class="btn btn-primary" style="flex:1;min-width:140px;" onclick="chatAboutAnalysis()">💬 Chat with Lily</button>
       </div>
     </div>`;
-  setTimeout(() => drawRadarChart(canvasId, metrics, skinType, mlResults), 300);
+  setTimeout(() => drawRadarChart(canvasId, metrics, metricDefs, ml), 300);
 }
 
 function retakePhoto() {

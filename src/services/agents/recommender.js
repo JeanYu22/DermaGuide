@@ -71,15 +71,15 @@ async function recommend(analysis, candidates) {
 AVAILABLE PRODUCTS:
 ${catalogText(candidates)}
 
-Pick the 3 BEST products for THIS customer. Base each choice on the product's key ingredients and how they address the customer's highest-scoring concerns and skin type. For each pick, write ONE concise sentence naming the key ingredient(s) and the concern it helps.
+Pick the 4 to 8 BEST products for THIS customer (more if several genuinely fit, fewer only if the catalogue is small). Base each choice on the product's key ingredients and how they address the customer's highest-scoring concerns and skin type. For each pick, write ONE concise sentence naming the key ingredient(s) and the concern it helps.
 
-Reply with EXACTLY 3 lines, nothing else, using the product names exactly as written above:
+Reply with ONE LINE PER PRODUCT, nothing else, using the product names exactly as written above:
 PICK: <product name> | <one-sentence ingredient-based reason>`,
     },
   ];
 
-  const text = await llm.chatCompletion(messages, { temperature: 0.3, maxTokens: 400 });
-  return parsePicks(text, candidates);
+  const text = await llm.chatCompletion(messages, { temperature: 0.3, maxTokens: 700 });
+  return parsePicks(text, candidates).slice(0, 10);
 }
 
 module.exports = { recommend };

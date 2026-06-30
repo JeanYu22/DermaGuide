@@ -9,7 +9,13 @@ const analyzer = require('../services/agents/analyzer');
 const reviewer = require('../services/agents/reviewer');
 const recommender = require('../services/agents/recommender');
 const calibration = require('../services/calibration');
+const { profileFor } = require('../services/bodyPartProfiles');
 const { asyncHandler } = require('../middleware/errorHandler');
+
+/** Metric key→label list for a profile, for the radar chart on the client. */
+function metricDefsFor(profile) {
+  return profile.metrics.map(([key, label]) => ({ key, label }));
+}
 
 const router = express.Router();
 
@@ -33,12 +39,12 @@ function recommendFor(parsed, products) {
   const matches = (p) => p.concerns.filter((c) => concernList.some((cc) => cc.includes(c) || c.includes(cc)));
 
   let recs = products.filter((p) => matches(p).length > 0);
-  if (recs.length < 3) {
+  if (recs.length < 4) {
     const extra = products.filter((p) => !recs.includes(p));
     recs = [...recs, ...extra];
   }
 
-  return recs.slice(0, 3).map((p) => {
+  return recs.slice(0, 6).map((p) => {
     const matched = matches(p);
     const reason = matched.length
       ? `Targets your ${matched.slice(0, 2).join(' & ')}`
@@ -67,7 +73,7 @@ function candidatesFor(a, products, n = 12) {
  * the model is unavailable or returns nothing usable.
  */
 async function buildRecommendations(analysisLike, products) {
-  const candidates = candidatesFor(analysisLike, products, 12);
+  const candidates = candidatesFor(analysisLike, products, 16);
   try {
     const ai = await recommender.recommend(analysisLike, candidates);
     if (ai.length) return ai;
@@ -103,8 +109,11 @@ router.post(
       });
     }
 
-    const raw = await analyzer.analyze(dataUrl);
-    const parsed = analyzer.parse(raw);
+    // Choose the body-part-specific metric profile from the classifier's locate.
+    const profile = profileFor(subject.bodyPart);
+
+    const raw = await analyzer.analyze(dataUrl, profile);
+    const parsed = analyzer.parse(raw, profile);
 
     // Gate 2: the analyzer's own IS_HUMAN_SKIN line, as a backup.
     if (!parsed.isSkin) {
@@ -132,7 +141,8 @@ router.post(
     const modelMetrics = parsed.metrics;
     const offsets = await calibration.getOffsets();
     const metrics = calibration.applyTo(modelMetrics, offsets);
-    const topConcerns = analyzer.computeTopConcerns(metrics) || parsed.topConcerns;
+    const labelMap = analyzer.labelMapFromProfile(profile);
+    const topConcerns = analyzer.computeTopConcerns(metrics, labelMap) || parsed.topConcerns;
 
     // Peer review (best-effort).
     let reviewerVerdict = 'PASS';
@@ -174,11 +184,15 @@ router.post(
     const record = await Analysis.create({
       user: req.user?._id || null,
       bodyPart: parsed.bodyPart,
+      bodyPartCategory: profile.label,
+      isFace: profile.face,
       skinType: parsed.skinType,
       metrics,
       modelMetrics,
       topConcerns,
       recommendation: parsed.recommendation,
+      medicalFlag: parsed.medicalFlag,
+      medicalAdvice: parsed.medicalAdvice,
       reviewerVerdict,
       mlValidation,
       recommendedProducts: recommended.map((p) => p.id),
@@ -196,10 +210,15 @@ router.post(
     res.status(201).json({
       analysisId: record._id.toString(),
       bodyPart: parsed.bodyPart,
+      bodyPartCategory: profile.label,
+      isFace: profile.face,
+      metricDefs: metricDefsFor(profile),
       skinType: parsed.skinType,
       metrics,
       topConcerns,
       recommendation: parsed.recommendation,
+      medicalFlag: parsed.medicalFlag,
+      medicalAdvice: parsed.medicalAdvice,
       reviewerVerdict,
       recommendedProducts: recommended,
     });
@@ -240,13 +259,18 @@ router.post(
     const base = (record.modelMetrics && Object.keys(record.modelMetrics).length ? record.modelMetrics : record.metrics) || {};
     await calibration.recordCorrection(base, userMetrics);
 
-    // Store the user's truth as the displayed metrics.
+    // Store the user's truth as the displayed metrics (over this analysis's keys).
+    const profile = profileFor(record.bodyPart);
+    const keys = profile.metrics.map(([k]) => k);
+    const existing = record.metrics || {};
     const corrected = {};
-    for (const m of calibration.METRICS) {
-      corrected[m] = Math.max(0, Math.min(10, Math.round(Number(userMetrics[m]) ?? record.metrics[m] ?? 0)));
+    for (const m of keys) {
+      const v = userMetrics[m] != null ? userMetrics[m] : existing[m];
+      corrected[m] = Math.max(0, Math.min(10, Math.round(Number(v) || 0)));
     }
     record.metrics = corrected;
-    record.topConcerns = analyzer.computeTopConcerns(corrected) || record.topConcerns;
+    record.markModified('metrics');
+    record.topConcerns = analyzer.computeTopConcerns(corrected, analyzer.labelMapFromProfile(profile)) || record.topConcerns;
     record.revised = true;
     await record.save();
 
@@ -266,6 +290,8 @@ router.post(
     res.json({
       analysisId: record._id.toString(),
       bodyPart: record.bodyPart,
+      isFace: record.isFace,
+      metricDefs: metricDefsFor(profile),
       skinType: record.skinType,
       metrics: corrected,
       topConcerns: record.topConcerns,
@@ -290,11 +316,13 @@ router.post(
     const record = await Analysis.findById(req.params.id);
     if (!record) return res.status(404).json({ error: 'Analysis not found' });
 
+    const profile = profileFor(record.bodyPart);
     const dataUrl = toDataUrl(req.file);
-    const raw = await analyzer.reEvaluate(dataUrl, JSON.stringify(record.metrics), feedback);
-    const parsed = analyzer.parse(raw);
+    const raw = await analyzer.reEvaluate(dataUrl, profile, JSON.stringify(record.metrics), feedback);
+    const parsed = analyzer.parse(raw, profile);
 
     record.metrics = parsed.metrics;
+    record.markModified('metrics');
     record.topConcerns = parsed.topConcerns;
     record.recommendation = parsed.recommendation;
     record.skinType = parsed.skinType;
@@ -302,9 +330,12 @@ router.post(
     await record.save();
 
     const products = (await Product.find({ active: true })).map((p) => p.toStorefront());
-    const recommended = recommendFor(parsed, products);
+    const recommended = await buildRecommendations(
+      { bodyPart: record.bodyPart, skinType: record.skinType, topConcerns: parsed.topConcerns, metrics: parsed.metrics },
+      products
+    );
 
-    res.json({ analysisId: record._id.toString(), ...parsed, revised: true, recommendedProducts: recommended });
+    res.json({ analysisId: record._id.toString(), ...parsed, isFace: profile.face, metricDefs: metricDefsFor(profile), revised: true, recommendedProducts: recommended });
   })
 );
 

@@ -11,11 +11,6 @@ const Calibration = require('../models/Calibration');
  * weights, but we continuously correct their systematic bias from real votes.
  */
 
-const METRICS = [
-  'dryness', 'dehydration', 'wrinkles', 'sagging', 'sensitivity',
-  'redness', 'blockedPores', 'enlargedPores', 'acne', 'pigmentation',
-];
-
 const MIN_SAMPLES = 3; // need a few corrections before trusting an offset
 const MAX_OFFSET = 4; // clamp learned correction to keep it sane
 
@@ -31,12 +26,14 @@ async function getDoc() {
   );
 }
 
-/** Current learned offsets per metric (0 until enough samples exist). */
+/**
+ * Current learned offsets. Metric-agnostic: returns an offset for every metric
+ * key that has enough correction samples (works across body-part profiles).
+ */
 async function getOffsets() {
   const doc = await getDoc();
   const offsets = {};
-  for (const m of METRICS) {
-    const s = doc.stats?.[m];
+  for (const [m, s] of Object.entries(doc.stats || {})) {
     offsets[m] = s && s.count >= MIN_SAMPLES ? clamp(s.sum / s.count, -MAX_OFFSET, MAX_OFFSET) : 0;
   }
   return offsets;
@@ -45,7 +42,7 @@ async function getOffsets() {
 /** Apply offsets to a metrics object, returning calibrated (clamped 0-10) values. */
 function applyTo(metrics, offsets) {
   const out = {};
-  for (const m of METRICS) {
+  for (const m of Object.keys(metrics || {})) {
     const base = Number(metrics[m]) || 0;
     const adj = offsets[m] || 0;
     out[m] = clamp(Math.round(base + adj), 0, 10);
@@ -61,7 +58,7 @@ function applyTo(metrics, offsets) {
 async function recordCorrection(modelMetrics, userMetrics) {
   const doc = await getDoc();
   const stats = doc.stats || {};
-  for (const m of METRICS) {
+  for (const m of Object.keys(userMetrics || {})) {
     if (userMetrics[m] === undefined || userMetrics[m] === null) continue;
     const model = Number(modelMetrics?.[m]) || 0;
     const truth = clamp(Number(userMetrics[m]) || 0, 0, 10);
@@ -89,12 +86,14 @@ async function recordConfirmation() {
 async function summary() {
   const doc = await getDoc();
   const offsets = await getOffsets();
-  const perMetric = METRICS.map((m) => ({
-    metric: m,
-    samples: doc.stats?.[m]?.count || 0,
-    offset: +(offsets[m] || 0).toFixed(2),
-  }));
+  const perMetric = Object.keys(doc.stats || {})
+    .sort()
+    .map((m) => ({
+      metric: m,
+      samples: doc.stats[m]?.count || 0,
+      offset: +(offsets[m] || 0).toFixed(2),
+    }));
   return { corrections: doc.corrections, confirmations: doc.confirmations, perMetric };
 }
 
-module.exports = { METRICS, getOffsets, applyTo, recordCorrection, recordConfirmation, summary };
+module.exports = { getOffsets, applyTo, recordCorrection, recordConfirmation, summary };
