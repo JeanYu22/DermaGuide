@@ -544,32 +544,71 @@ h1, h2, h3, h4 { font-family: 'Playfair Display', Georgia, serif; letter-spacing
 .coach-card .btn { margin-top: .55rem; }
 
 /* =====================================================================
-   Clinical face-scan processing animation (echoes the promo device)
+   Lily avatar images (real illustrated nurse from the promo)
    ===================================================================== */
-.face-scan { position: relative; width: 176px; height: 176px; margin: 0 auto 1.1rem; display: grid; place-items: center; }
-.face-scan.sm { width: 116px; height: 116px; margin-bottom: .6rem; }
-.fs-ring { position: absolute; inset: 0; border-radius: 50%; animation: spin 2.6s linear infinite;
-    background: conic-gradient(from 0deg, rgba(143,185,201,0) 0deg, rgba(143,185,201,.15) 60deg, var(--clinical-blue) 180deg, var(--clinical-deep) 250deg, rgba(143,185,201,0) 330deg);
-    -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 8px), #000 calc(100% - 7px));
-    mask: radial-gradient(farthest-side, transparent calc(100% - 8px), #000 calc(100% - 7px));
-    filter: drop-shadow(0 0 9px rgba(91,147,179,.6)); }
-.fs-ring.fs-ring2 { inset: 11px; animation-duration: 3.8s; animation-direction: reverse; opacity: .55;
-    background: conic-gradient(from 90deg, rgba(232,111,92,0) 0deg, rgba(232,111,92,.45) 120deg, rgba(232,111,92,0) 240deg); filter: drop-shadow(0 0 6px rgba(232,111,92,.4)); }
-.fs-core { position: relative; width: 74%; height: 74%; border-radius: 50%; overflow: hidden; display: grid; place-items: center;
-    background: radial-gradient(circle at 50% 38%, #ffffff, #eaf3f7);
-    box-shadow: inset 0 0 26px rgba(91,147,179,.28); animation: ringGlow 2.6s ease-in-out infinite; }
-.fs-mesh { width: 84%; height: 84%; opacity: .92; }
-.fs-sweep { position: absolute; left: 0; right: 0; top: 0; height: 22%;
-    background: linear-gradient(180deg, rgba(94,200,229,0), rgba(94,200,229,.5) 55%, rgba(94,200,229,0));
-    filter: blur(1px); animation: fsSweep 2.2s ease-in-out infinite; }
-@keyframes fsSweep { 0% { top: -6%; } 50% { top: 84%; } 100% { top: -6%; } }
-.fs-hex { position: absolute; width: 13px; height: 13px; opacity: 0; background: var(--clinical-deep);
-    clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);
-    box-shadow: 0 0 8px rgba(91,147,179,.7); animation: hexPulse 2.6s ease-in-out infinite; }
-.fs-hex.h2, .fs-hex.h4, .fs-hex.h6 { background: var(--coral); box-shadow: 0 0 8px rgba(232,111,92,.6); }
-@keyframes hexPulse { 0%, 100% { opacity: 0; transform: scale(.5); } 42% { opacity: 1; transform: scale(1); } 70% { opacity: .35; } }
+.lily-img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 18%; display: block; }
+.nurse-avatar, .assistant-avatar { overflow: hidden; }
+.assistant-face { width: 100%; height: 100%; display: block; }
+.chat-title .lily-badge { width: 34px; height: 34px; border-radius: 11px; overflow: hidden; display: inline-grid; place-items: center;
+    vertical-align: middle; margin-inline-end: .1rem; box-shadow: 0 6px 16px rgba(91,147,179,.3); }
+/* Hero: present Lily as a rounded portrait card (like the promo framing) */
+.nurse-card { position: relative; z-index: 2; width: min(300px, 78vw); aspect-ratio: 0.82; border-radius: 30px; overflow: hidden;
+    border: 6px solid var(--pearl); box-shadow: 0 26px 60px rgba(91,147,179,.32); background: linear-gradient(160deg, #dbe7f2, #eef4f9);
+    animation: float 6s ease-in-out infinite; }
+.nurse-card img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 8%; display: block; }
+.coach-avatar img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 12%; display: block; }
+
+/* =====================================================================
+   Clinical face-scan processing animation (real scan-device art)
+   ===================================================================== */
+.face-scan { position: relative; width: 190px; height: 190px; margin: 0 auto 1rem; }
+.face-scan.sm { width: 120px; height: 120px; margin-bottom: .5rem; }
+.scan-media { position: relative; width: 100%; height: 100%; border-radius: 50%; overflow: hidden;
+    box-shadow: 0 0 0 3px rgba(143,185,201,.25), 0 0 26px rgba(94,200,229,.5); animation: scanPulse 2.4s ease-in-out infinite; }
+.scan-media img { position: absolute; left: -4%; top: -4%; width: 108%; height: 108%; object-fit: cover; display: block; }
+.fs-sweep { position: absolute; left: 0; right: 0; top: 0; height: 26%;
+    background: linear-gradient(180deg, rgba(190,242,255,0), rgba(190,242,255,.6) 55%, rgba(190,242,255,0));
+    mix-blend-mode: screen; filter: blur(1px); animation: fsSweep 2.2s ease-in-out infinite; }
+@keyframes fsSweep { 0% { top: -8%; } 50% { top: 82%; } 100% { top: -8%; } }
+@keyframes scanPulse { 0%, 100% { box-shadow: 0 0 0 3px rgba(143,185,201,.22), 0 0 20px rgba(94,200,229,.4); filter: brightness(1); }
+    50% { box-shadow: 0 0 0 3px rgba(143,185,201,.35), 0 0 34px rgba(94,200,229,.75); filter: brightness(1.07); } }
 .fs-caption { text-align: center; font-weight: 700; color: var(--cocoa-soft); font-size: .92rem; }
 .fs-substatus { text-align: center; font-size: .82rem; color: var(--clinical-deep); margin-top: .35rem; }
+
+/* =====================================================================
+   Two-panel analyzer — upload/preview left, results right (no scroll)
+   ===================================================================== */
+.analyzer-layout { display: grid; grid-template-columns: 360px minmax(0, 1fr); gap: 1.2rem; align-items: start; max-width: 1120px; margin: 0 auto; }
+.analyze-left, .analyze-right { background: rgba(255,255,255,.82); backdrop-filter: blur(14px); border: 1px solid var(--line);
+    border-radius: var(--radius-lg); box-shadow: var(--shadow-soft); padding: 1.3rem; }
+.analyze-h { font-size: 1.15rem; color: var(--deep-cocoa); margin-bottom: .35rem; }
+.analyze-sub { color: var(--cocoa-soft); font-size: .88rem; margin-bottom: 1rem; line-height: 1.5; }
+.drop-zone { border: 1.5px dashed rgba(47,37,35,.24); border-radius: var(--radius-md); padding: 1.1rem; text-align: center;
+    background: radial-gradient(circle at 50% 26%, rgba(143,185,201,.14), transparent 46%), rgba(255,255,255,.55); transition: border-color .2s, background .2s, transform .2s; }
+.drop-zone.is-dragging { border-color: var(--coral); background: rgba(232,111,92,.08); transform: translateY(-2px); }
+.photo-preview { width: 100%; aspect-ratio: 1/1.04; border-radius: var(--radius-md); overflow: hidden; position: relative; cursor: pointer;
+    display: grid; place-items: center; color: var(--muted); font-weight: 700; margin-bottom: 1rem;
+    background: radial-gradient(circle at 46% 20%, rgba(255,255,255,.9), transparent 15%), linear-gradient(135deg, rgba(143,185,201,.32), rgba(233,183,167,.32)); }
+.photo-preview img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.scan-overlay { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(255,248,243,.6); backdrop-filter: blur(2px); }
+.drop-hint { font-size: .8rem; color: var(--muted); margin-top: .6rem; }
+.analyze-left .tips { list-style: none; margin: 1rem 0; padding: 0; display: grid; gap: .5rem; font-size: .88rem; color: var(--cocoa-soft); }
+.analyze-left .tips li { display: flex; gap: .5rem; align-items: start; }
+.analyze-left .tips li::before { content: "✓"; color: var(--sage-dark); font-weight: 900; }
+.analyze-empty, .analyze-busy { display: grid; place-items: center; text-align: center; min-height: 440px; color: var(--muted); gap: .3rem; }
+.analyze-busy { align-content: center; gap: .6rem; }
+.analyze-empty-icon { font-size: 2.6rem; opacity: .7; }
+.analyze-empty-title { font-weight: 800; color: var(--cocoa-soft); }
+.analyze-empty-sub { font-size: .9rem; max-width: 340px; line-height: 1.5; }
+.analyze-right .pro-analysis { background: none; border: 0; box-shadow: none; padding: 0; margin: 0; }
+.result-head { display: flex; justify-content: space-between; gap: 1rem; align-items: flex-start; margin-bottom: 1.1rem; }
+.result-title { font-size: 1.35rem; color: var(--deep-cocoa); margin: .3rem 0; text-transform: capitalize; }
+.result-summary { color: var(--cocoa-soft); font-size: .92rem; line-height: 1.55; margin: .5rem 0 0; }
+.result-charts { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1rem; align-items: center; margin-bottom: 1rem; }
+.result-charts .radar-container { margin: 0; }
+.result-charts .metric-list { grid-template-columns: 1fr; margin: 0; }
+@media (max-width: 1180px) { .analyzer-layout { grid-template-columns: 320px minmax(0, 1fr); } }
+@media (max-width: 900px) { .analyzer-layout { grid-template-columns: 1fr; } .result-charts { grid-template-columns: 1fr; } .analyze-empty, .analyze-busy { min-height: 240px; } }
 
 /* =====================================================================
    Analysis module extras — profile eyebrow chip + routine CTA

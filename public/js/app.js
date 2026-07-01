@@ -73,72 +73,22 @@ const tips = [
 // ===========================================================================
 // Lily — animated illustrated care agent + clinical scan visuals
 // ===========================================================================
-// A friendly, human-feeling nurse illustration (headset + stethoscope) with
-// idle blink / breathe / talk animation. Injected wherever [data-lily] appears.
-const LILY_SVG = `
-<svg class="lily-svg" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-  <path d="M16 122 Q20 88 44 82 L76 82 Q100 88 104 122 Z" fill="#ffffff"/>
-  <path d="M16 122 Q20 88 44 82 L76 82 Q100 88 104 122 Z" fill="none" stroke="#dfe8ec" stroke-width="1.4"/>
-  <path d="M50 82 L60 97 L70 82 Z" fill="#eaf1f4"/>
-  <path d="M50 84 C48 101 44 105 40 107" fill="none" stroke="#5b93b3" stroke-width="3" stroke-linecap="round"/>
-  <path d="M70 84 C72 101 76 105 80 107" fill="none" stroke="#5b93b3" stroke-width="3" stroke-linecap="round"/>
-  <circle cx="80" cy="109" r="5" fill="#5b93b3"/><circle cx="80" cy="109" r="2.3" fill="#cfe0e8"/>
-  <rect x="53" y="70" width="14" height="16" rx="6" fill="#e6b389"/>
-  <g class="lily-head">
-    <circle cx="31" cy="55" r="5" fill="#f1c9a5"/><circle cx="89" cy="55" r="5" fill="#f1c9a5"/>
-    <circle cx="60" cy="52" r="30" fill="#f1c9a5"/>
-    <path d="M30 52 Q30 20 60 20 Q90 20 90 52 L90 40 Q86 26 60 26 Q34 26 34 40 Z" fill="#6f4a37"/>
-    <path d="M30 56 Q27 34 41 26 Q34 40 36 56 Z" fill="#6f4a37"/>
-    <path d="M90 56 Q93 34 79 26 Q86 40 84 56 Z" fill="#6f4a37"/>
-    <path d="M36 41 Q44 30 60 30 Q76 30 84 41 Q70 36 60 36 Q50 36 36 41 Z" fill="#5c3c2c"/>
-    <circle cx="46" cy="61" r="5" fill="#ef9a8a" opacity=".42"/><circle cx="74" cy="61" r="5" fill="#ef9a8a" opacity=".42"/>
-    <g class="lily-eyes">
-      <circle cx="50" cy="53" r="3.4" fill="#3b2b23"/><circle cx="70" cy="53" r="3.4" fill="#3b2b23"/>
-      <circle cx="51.2" cy="51.8" r="1" fill="#fff"/><circle cx="71.2" cy="51.8" r="1" fill="#fff"/>
-    </g>
-    <path d="M45 46 Q50 44 55 46" stroke="#5c3c2c" stroke-width="1.6" fill="none" stroke-linecap="round"/>
-    <path d="M65 46 Q70 44 75 46" stroke="#5c3c2c" stroke-width="1.6" fill="none" stroke-linecap="round"/>
-    <path d="M60 55 L58 61 Q60 62 62 61" stroke="#d9a880" stroke-width="1.4" fill="none" stroke-linecap="round"/>
-    <path class="lily-mouth" d="M52 65 Q60 73 68 65" stroke="#b5573f" stroke-width="2.2" fill="none" stroke-linecap="round"/>
-    <path d="M32 47 Q60 15 88 47" fill="none" stroke="#5b93b3" stroke-width="4" stroke-linecap="round"/>
-    <rect x="26" y="47" width="8" height="12" rx="3" fill="#5b93b3"/>
-    <path d="M30 59 Q25 71 43 71" fill="none" stroke="#5b93b3" stroke-width="2.6" stroke-linecap="round"/>
-    <circle class="lily-mic" cx="44" cy="71" r="2.7" fill="#e86f5c"/>
-  </g>
-</svg>`;
+// Lily is presented with the real illustrated nurse (from the source promo):
+// a friendly dermatologist portrait. Circular slots use a face crop.
+const LILY_IMG = '<img class="lily-img" src="/img/lily-face.png" alt="Lily, your skincare guide" loading="lazy">';
 
-// Wireframe face mesh used inside the scan ring.
-const FACE_MESH_SVG = `
-<svg class="fs-mesh" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-  <g stroke="#5b93b3" fill="none" stroke-width="1.1" opacity=".72" stroke-linecap="round">
-    <path d="M100 30 C62 30 50 66 53 100 C56 134 79 170 100 170 C121 170 144 134 147 100 C150 66 138 30 100 30 Z"/>
-    <path d="M100 32 L100 168"/>
-    <path d="M77 40 C70 90 74 142 86 164"/>
-    <path d="M123 40 C130 90 126 142 114 164"/>
-    <path d="M55 78 Q100 66 145 78"/>
-    <path d="M53 100 Q100 92 147 100"/>
-    <path d="M57 124 Q100 118 143 124"/>
-    <ellipse cx="78" cy="90" rx="10" ry="6"/><ellipse cx="122" cy="90" rx="10" ry="6"/>
-    <path d="M66 78 Q78 73 90 78"/><path d="M110 78 Q122 73 134 78"/>
-    <path d="M100 96 L100 116"/><path d="M92 118 Q100 122 108 118"/>
-    <path d="M84 136 Q100 145 116 136"/>
-  </g>
-</svg>`;
-
-// Inject the Lily illustration into every [data-lily] slot on the page.
+// Inject the Lily face into every [data-lily] slot on the page.
 function injectLilyAvatars(root) {
   (root || document).querySelectorAll('[data-lily]').forEach((el) => {
-    if (!el.dataset.lilyDone) { el.innerHTML = LILY_SVG; el.dataset.lilyDone = '1'; }
+    if (!el.dataset.lilyDone) { el.innerHTML = LILY_IMG; el.dataset.lilyDone = '1'; }
   });
 }
 
-// Clinical face-scan loader markup (glowing ring + mesh + hexagon callouts).
+// Clinical face-scan loader — the real scan-device art with an animated
+// light sweep + glow pulse (mirrors the promo's face-scan device).
 function scanFaceHTML(caption, opts = {}) {
-  const hexes = [['15%', '22%'], ['15%', '66%'], ['46%', '10%'], ['46%', '80%'], ['76%', '26%'], ['76%', '62%']];
-  const cells = hexes.map((h, i) => `<span class="fs-hex h${i + 1}" style="top:${h[0]};left:${h[1]};animation-delay:${(i * 0.28).toFixed(2)}s"></span>`).join('');
   return `<div class="face-scan${opts.small ? ' sm' : ''}" role="img" aria-label="Analyzing your skin">
-    <div class="fs-ring"></div><div class="fs-ring fs-ring2"></div>
-    <div class="fs-core">${FACE_MESH_SVG}<div class="fs-sweep"></div>${cells}</div>
+    <div class="scan-media"><img src="/img/scan-face.png" alt=""><div class="fs-sweep"></div></div>
   </div>${caption ? `<div class="fs-caption">${caption}</div>` : ''}${opts.substatus ? `<div class="fs-substatus" id="${opts.substatusId || ''}">${opts.substatus}</div>` : ''}`;
 }
 
@@ -209,7 +159,49 @@ function dismissAssistant() {
 function openChatFromAssistant() { dismissAssistant(); setTimeout(openChat, 300); }
 function openChat() { document.getElementById('chatModal').classList.add('active'); }
 function closeChat() { document.getElementById('chatModal').classList.remove('active'); }
-function openAnalyzer() { document.getElementById('analyzerModal').classList.add('active'); }
+function openAnalyzer() { document.getElementById('analyzerModal').classList.add('active'); renderAnalyzerHome(); }
+
+// Two-panel analyzer scaffold: upload/preview on the left, results on the right.
+function renderAnalyzerHome() {
+  const c = document.getElementById('analyzerContent');
+  if (!c) return;
+  c.innerHTML = `<div class="analyzer-layout">${analyzerLeftHTML()}${analyzerRightEmptyHTML()}</div>`;
+  setTimeout(bindUploadZone, 0);
+}
+function analyzerLeftHTML() {
+  return `<aside class="analyze-left" id="analyzeLeft">
+    <h3 class="analyze-h">${L('upload_selfie', 'Upload a selfie for cosmetic guidance')}</h3>
+    <p class="analyze-sub">${L('upload_help', 'Your photo is analyzed for cosmetic guidance and is never stored.')}</p>
+    <div class="drop-zone" id="uploadZone">
+      <div class="photo-preview" id="photoPreview"><span>${L('selfie_preview', 'Selfie preview')}</span></div>
+      <input type="file" id="fileInput" accept="image/*" capture="user" style="display:none;" onchange="handleImage(event)">
+      <button class="btn btn-secondary" type="button" onclick="document.getElementById('fileInput').click()">${L('choose_photo', 'Choose Photo')}</button>
+      <div class="drop-hint">${L('drag_drop', 'Or drag and drop an image here.')}</div>
+    </div>
+    <ul class="tips">
+      <li>${L('tip_light', 'Use natural light and avoid heavy filters.')}</li>
+      <li>${L('tip_center', 'Center the area and remove sunglasses or hats.')}</li>
+      <li>${L('tip_nodiag', 'DermaGuide does not diagnose medical conditions.')}</li>
+      <li>${L('tip_derived', 'Only derived cosmetic metrics are saved.')}</li>
+    </ul>
+    <button class="btn btn-primary btn-full" onclick="document.getElementById('fileInput').click()">📸 ${L('start_snapshot', 'Start Private Skin Snapshot')}</button>
+  </aside>`;
+}
+function analyzerRightEmptyHTML() {
+  return `<section class="analyze-right" id="analyzeRight"><div class="analyze-empty">
+    <span class="profile-eyebrow">${L('glow_profile', 'Your Glow Profile')}</span>
+    <div class="analyze-empty-icon">🔬</div>
+    <div class="analyze-empty-title">${L('results_here', 'Your results appear here')}</div>
+    <div class="analyze-empty-sub">${L('results_hint', 'Upload a photo and Lily maps your skin metrics, then builds a routine — all on this page.')}</div>
+  </div></section>`;
+}
+// Put the chosen photo (and, while scanning, the scan overlay) in the left panel.
+function setAnalyzerPhoto(imgSrc, scanning, caption, substatus, substatusId) {
+  const pv = document.getElementById('photoPreview');
+  if (!pv) return;
+  pv.innerHTML = `<img src="${imgSrc}" alt="your photo">${scanning ? `<div class="scan-overlay">${scanFaceHTML(caption, { small: true, substatus, substatusId })}</div>` : ''}`;
+}
+function setAnalyzerRight(html) { const r = document.getElementById('analyzeRight'); if (r) r.innerHTML = html; }
 function closeAnalyzer() { document.getElementById('analyzerModal').classList.remove('active'); }
 function scrollToProducts() { document.getElementById('productsSection').scrollIntoView({ behavior: 'smooth' }); }
 function scrollToTips() { document.getElementById('tipsSection').scrollIntoView({ behavior: 'smooth' }); }
@@ -1101,90 +1093,98 @@ async function submitCorrection(analysisId, btn) {
   }
 }
 
-// Standalone analyzer modal
+// Standalone analyzer modal (two-panel: photo on the left, results on the right)
 async function handleImage(event) {
   const file = event.target.files[0];
   event.target.value = '';
   if (!file || !file.type.startsWith('image/')) return;
   State.currentImageFile = file;
-  const content = document.getElementById('analyzerContent');
+  if (!document.getElementById('analyzeLeft')) renderAnalyzerHome();
 
   const reader = new FileReader();
   reader.onload = async (e) => {
     const imgSrc = e.target.result;
-    content.innerHTML = `<img src="${imgSrc}" class="preview-img"><div class="scan-animation">${scanFaceHTML(L('checking_skin', 'Checking for visible skin…'))}</div>`;
+    setAnalyzerPhoto(imgSrc, true, L('checking_skin', 'Checking for visible skin…'));
+    setAnalyzerRight(analyzerBusyHTML(L('checking_skin', 'Checking for visible skin…')));
 
     const pre = await preValidateSkinImage(file);
     if (!pre.valid) {
-      content.innerHTML = `<img src="${imgSrc}" class="preview-img" style="opacity:.5;">
-        <div style="padding:2rem;text-align:center;"><div style="font-size:3rem;">🚫</div>
-        <h3 style="color:#e65100;margin:.5rem 0;">No Skin Detected</h3><p style="color:#5d4037;">${pre.message}</p>
-        <button class="btn btn-primary" style="margin-top:1rem;" onclick="retakePhoto()">📸 Upload Different Photo</button></div>`;
+      setAnalyzerPhoto(imgSrc, false);
+      setAnalyzerRight(analyzerErrorHTML('🚫', L('no_skin', 'No Skin Detected'), pre.message));
       return;
     }
 
-    content.innerHTML = `<img src="${imgSrc}" class="preview-img"><div class="scan-animation">${scanFaceHTML(
-      L('analyzing_ai', 'Analyzing your skin with AI…'),
-      { substatus: `✅ ${L('skin_detected', 'Skin detected')} (${Math.round(pre.skinPercentage)}%) • 🤖 LLM Vision • 🧬 ML…`, substatusId: 'standaloneMlStatus' },
-    )}</div>`;
+    setAnalyzerPhoto(imgSrc, true, L('analyzing_ai', 'Analyzing your skin with AI…'),
+      `✅ ${L('skin_detected', 'Skin detected')} (${Math.round(pre.skinPercentage)}%) • 🤖 LLM • 🧬 ML…`, 'standaloneMlStatus');
+    setAnalyzerRight(analyzerBusyHTML(L('analyzing_ai', 'Analyzing your skin with AI…')));
 
     try {
       const { result, mlResults } = await runAnalysis(file, {
         onStatus: (ml) => {
           const el = document.getElementById('standaloneMlStatus');
-          if (el && ml) el.innerHTML = `✅ Skin detected • 🤖 LLM Vision • 🧬 ML Ready (${Math.round((ml.confidence || 0) * 100)}%)`;
+          if (el && ml) el.innerHTML = `✅ ${L('skin_detected', 'Skin detected')} • 🤖 LLM • 🧬 ML (${Math.round((ml.confidence || 0) * 100)}%)`;
         },
       });
+      setAnalyzerPhoto(imgSrc, false);
       displayStandaloneAnalysis(result, imgSrc, mlResults);
     } catch (err) {
+      setAnalyzerPhoto(imgSrc, false);
       if (err.code === 'not_human_skin') {
-        content.innerHTML = `<img src="${imgSrc}" class="preview-img" style="opacity:.5;">
-          <div style="padding:2rem;text-align:center;"><div style="font-size:3rem;">🚫</div>
-          <h3 style="color:#e65100;margin:.5rem 0;">Not Human Skin</h3><p style="color:#5d4037;">${err.message}</p>
-          <button class="btn btn-primary" style="margin-top:1rem;" onclick="retakePhoto()">📸 Upload Different Photo</button></div>`;
+        setAnalyzerRight(analyzerErrorHTML('🚫', L('not_human', 'Not Human Skin'), err.message));
         return;
       }
       const detail = err.raw ? `<div style="font-size:.75rem;opacity:.6;margin-top:.5rem;white-space:pre-wrap;">Model said: ${err.raw.substring(0, 200)}…</div>` : '';
-      content.innerHTML = `<img src="${imgSrc}" class="preview-img"><div style="text-align:center;color:var(--clay);padding:2rem;">${err.message || 'Analysis failed. Please try again.'}${detail}</div><button class="btn btn-primary btn-full" onclick="retakePhoto()">Try Again</button>`;
+      setAnalyzerRight(analyzerErrorHTML('⚠️', L('analysis_failed', 'Analysis failed'), (err.message || 'Please try again.') + detail));
     }
   };
   reader.readAsDataURL(file);
 }
 
+// Right-panel busy + error states (keep the left photo visible).
+function analyzerBusyHTML(caption) {
+  return `<div class="analyze-busy"><span class="profile-eyebrow">${L('glow_profile', 'Your Glow Profile')}</span>
+    ${scanFaceHTML(caption)}</div>`;
+}
+function analyzerErrorHTML(icon, title, msg) {
+  return `<div class="analyze-empty"><div class="analyze-empty-icon">${icon}</div>
+    <div class="analyze-empty-title">${title}</div><div class="analyze-empty-sub">${msg}</div>
+    <button class="btn btn-primary" style="margin-top:1rem;" onclick="retakePhoto()">📸 ${L('upload_diff', 'Upload a different photo')}</button></div>`;
+}
+
+// Render the analysis result into the RIGHT panel: score-ring header, then the
+// radar chart and metric bars laid out horizontally, then routine + products —
+// all on the same page (matches the reference results panel).
 function displayStandaloneAnalysis(result, imgSrc, mlResults) {
-  const { analysisId, bodyPart, skinType, metrics, topConcerns, recommendation, recommendedProducts, metricDefs } = result;
+  const { analysisId, skinType, metrics, topConcerns, recommendation, recommendedProducts, metricDefs } = result;
   const ml = result.isFace ? mlResults : null; // ML cross-check is face only
   const canvasId = 'canvas-' + analysisId;
   analysisStore[analysisId] = { metrics, skinType, mlResults: ml, canvasId, metricDefs };
-  const content = document.getElementById('analyzerContent');
-  content.innerHTML = `
-    <img src="${imgSrc}" class="preview-img">
+  const headline = localizedTopConcerns(metrics, metricDefs) || topConcerns || L('pro_analysis', 'Skin snapshot');
+  setAnalyzerRight(`
     <div class="pro-analysis">
-      <div class="analysis-header"><div class="analysis-head-row">
-        <div>${profileEyebrowHTML()}<h3>${L('pro_analysis', 'Professional Skin Analysis')}</h3><div class="analysis-subtitle">${localizedSubtitle(result)}</div></div>
+      <div class="result-head">
+        <div>${profileEyebrowHTML()}<h3 class="result-title">${headline}</h3>
+          <div class="analysis-subtitle">${localizedSubtitle(result)}</div>
+          <p class="result-summary">${recommendation || ''}</p></div>
         ${scoreRingHTML(metrics)}
-      </div></div>
-      ${medicalBannerHTML(result)}
-      <div class="radar-container"><canvas id="${canvasId}" width="400" height="400"></canvas></div>
-      <div class="metrics-grid" id="grid-${analysisId}">${metricsGridHTML(metrics, metricDefs)}</div>
-      <div class="analysis-summary"><div class="summary-title">${L('top_concerns', 'Top Concerns')}</div><div>${localizedTopConcerns(metrics, metricDefs) || topConcerns}</div></div>
-      <div class="analysis-summary"><div class="summary-title">${L('pro_rec', 'Professional Recommendation')}</div><div>${recommendation || '—'}</div></div>
-      ${ml && ml.mlConcerns ? `<div class="ml-status-box"><div style="display:flex;align-items:center;gap:.5rem;font-size:.9rem;"><span>✅</span><span class="ml-status-title">${L('ml_active', 'ML Cross-Validation Active')}</span><span class="ml-confidence-badge">${Math.round((ml.confidence || 0) * 100)}% confidence</span></div></div>` : ''}
-      ${feedbackSectionHTML(analysisId)}
-      ${recommendedProducts?.length ? recDetailHTML(L('recommended_for', 'Recommended for you'), recommendedProducts) + routineCtaHTML(recommendedProducts) : ''}
-      <div style="margin-top:1.5rem;display:flex;gap:1rem;flex-wrap:wrap;">
-        <button class="btn btn-primary" style="flex:1;min-width:140px;" onclick="retakePhoto()">📸 ${L('new_analysis', 'New Analysis')}</button>
-        <button class="btn btn-primary" style="flex:1;min-width:140px;" onclick="chatAboutAnalysis()">💬 ${L('chat_lily_btn', 'Chat with Lily')}</button>
       </div>
-    </div>`;
+      ${medicalBannerHTML(result)}
+      <div class="result-charts">
+        <div class="radar-container"><canvas id="${canvasId}" width="400" height="400"></canvas></div>
+        <div class="metrics-grid metric-list" id="grid-${analysisId}">${metricsGridHTML(metrics, metricDefs)}</div>
+      </div>
+      ${ml && ml.mlConcerns ? `<div class="ml-status-box"><div style="display:flex;align-items:center;gap:.5rem;font-size:.9rem;"><span>✅</span><span class="ml-status-title">${L('ml_active', 'ML Cross-Validation Active')}</span><span class="ml-confidence-badge">${Math.round((ml.confidence || 0) * 100)}% confidence</span></div></div>` : ''}
+      ${recommendedProducts?.length ? routineCtaHTML(recommendedProducts) + recDetailHTML(L('recommended_for', 'Recommended for you'), recommendedProducts) : ''}
+      ${feedbackSectionHTML(analysisId)}
+      <div style="margin-top:1.2rem;display:flex;gap:.8rem;flex-wrap:wrap;">
+        <button class="btn btn-secondary" style="flex:1;min-width:130px;" onclick="retakePhoto()">📸 ${L('new_analysis', 'New Analysis')}</button>
+        <button class="btn btn-primary" style="flex:1;min-width:130px;" onclick="chatAboutAnalysis()">💬 ${L('chat_lily_btn', 'Chat with Lily')}</button>
+      </div>
+    </div>`);
   setTimeout(() => drawRadarChart(canvasId, metrics, localizeDefs(metricDefs), ml), 300);
 }
 
-function retakePhoto() {
-  const content = document.getElementById('analyzerContent');
-  content.innerHTML = `<div class="upload-zone" id="uploadZone"><div class="upload-icon">📸</div><h3 class="upload-title">Upload Your Photo</h3><p class="upload-text">Tap to take or select a photo</p><input type="file" id="fileInput" accept="image/*" capture="user" style="display:none;" onchange="handleImage(event)"></div>`;
-  setTimeout(bindUploadZone, 0);
-}
+function retakePhoto() { renderAnalyzerHome(); }
 
 function chatAboutAnalysis() {
   closeAnalyzer();
@@ -1497,7 +1497,15 @@ async function adminSecurity() {
 function bindUploadZone() {
   const zone = document.getElementById('uploadZone');
   const input = document.getElementById('fileInput');
-  if (zone && input) zone.onclick = () => input.click();
+  if (!zone || !input) return;
+  const preview = document.getElementById('photoPreview');
+  if (preview) preview.onclick = () => input.click();
+  ['dragenter', 'dragover'].forEach((ev) => zone.addEventListener(ev, (e) => { e.preventDefault(); zone.classList.add('is-dragging'); }));
+  ['dragleave', 'drop'].forEach((ev) => zone.addEventListener(ev, (e) => { e.preventDefault(); zone.classList.remove('is-dragging'); }));
+  zone.addEventListener('drop', (e) => {
+    const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if (file) handleImage({ target: { files: [file], value: '' } });
+  });
 }
 
 // ===========================================================================
