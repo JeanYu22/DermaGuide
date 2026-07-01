@@ -9,7 +9,8 @@ to a known-good version if a new update misbehaves.
 | --- | --- | --- |
 | `v1.0.0` | `cad8794` | Stable storefront: working AI skin analysis, human-skin gate, feedback calibration, recommendations with reasons/how-to-use. **Last version before dropshipping.** |
 | `v1.1.0` | `daad601` | Dropshipping supplier framework (AliExpress API + Spocket/BeautyJoint feed import) + versioning tooling. |
-| `v1.2.0` | branch tip | Dropshipping sourcing criteria (organic/EU/€1-10/MOQ-1), realistic demo catalogue with stock images, optional auto-SKU + duplicate-name guard, paginated searchable product **grid** (replaces carousel), real product images everywhere, admin thumbnails/search, **AI ingredient-based recommendation agent** (replaces keyword matching), admin uploads + AI label extraction, helper scripts (make-admin, db:info/backup/restore). **Snapshot before the next upgrade.** |
+| `v1.2.0` | `6c02f45` | Dropshipping sourcing criteria (organic/EU/€1-10/MOQ-1), realistic demo catalogue with stock images, optional auto-SKU + duplicate-name guard, paginated searchable product **grid** (replaces carousel), real product images everywhere, admin thumbnails/search, **AI ingredient-based recommendation agent** (replaces keyword matching), admin uploads + AI label extraction, helper scripts (make-admin, db:info/backup/restore). |
+| `v1.3.0` | branch tip | **Body-part-specific analyzer** (face/neck/hand/arm/leg/foot/back/chest metrics) + medical-safety flag; **face-only ML** cross-check; horizontal recommendation cards with large images (4-10 picks); **7-language i18n** (English + Traditional Chinese, Korean, French, Indonesian, Japanese, Arabic RTL); **PayPal + credit/debit card** checkout (sandbox-gated); redesigned landing with animated AI-nurse avatar, mission/vision. **Snapshot before the next stage.** |
 
 ### Create the checkpoint tags (one-time, from your own machine)
 
@@ -20,8 +21,9 @@ the branch). Run this once locally to publish them:
 git fetch origin
 git tag -a v1.0.0 cad8794 -m "Stable storefront before dropshipping"
 git tag -a v1.1.0 daad601 -m "Dropshipping milestone"
-git tag -a v1.2.0 origin/claude/shop-app-commercialize-j0yc77 -m "Shop Product demo built"
-git push origin v1.0.0 v1.1.0 v1.2.0
+git tag -a v1.2.0 6c02f45 -m "Shop Product demo built"
+git tag -a v1.3.0 origin/claude/shop-app-commercialize-j0yc77 -m "Body-part analyzer, i18n, payments, new landing"
+git push origin v1.0.0 v1.1.0 v1.2.0 v1.3.0
 ```
 
 Even without tags, **every commit is a restore point**. The v1.2.0 snapshot is
