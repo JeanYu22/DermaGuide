@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <linearGradient id="dgGold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F3D27A"/>
+      <stop offset="45%" stop-color="#D9A93C"/>
+      <stop offset="100%" stop-color="#A9781F"/>
+    </linearGradient>
+    <linearGradient id="dgOlive" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8B9B5E"/>
+      <stop offset="55%" stop-color="#6C7A42"/>
+      <stop offset="100%" stop-color="#54622F"/>
+    </linearGradient>
+    <linearGradient id="dgOliveGold" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#6C7A42"/>
+      <stop offset="100%" stop-color="#D9A93C"/>
+    </linearGradient>
+    <radialGradient id="dgSpark" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFFCEF"/>
+      <stop offset="100%" stop-color="#FFF3C4"/>
+    </radialGradient>
+  </defs>
+
+  <!-- outer + inner rings -->
+  <circle cx="100" cy="100" r="92" fill="none" stroke="url(#dgGold)" stroke-width="2"/>
+  <circle cx="100" cy="100" r="86" fill="none" stroke="url(#dgGold)" stroke-width="1"/>
+
+  <!-- cross, four rounded arms -->
+  <rect x="83" y="28" width="34" height="58" rx="10" fill="url(#dgGold)"/>
+  <rect x="28" y="83" width="58" height="34" rx="10" fill="url(#dgOlive)"/>
+  <rect x="114" y="83" width="58" height="34" rx="10" fill="url(#dgGold)"/>
+  <rect x="83" y="114" width="34" height="58" rx="10" fill="url(#dgOliveGold)"/>
+
+  <!-- sparkle on the top arm -->
+  <path d="M100 42 L104 54 L116 58 L104 62 L100 74 L96 62 L84 58 L96 54 Z" fill="url(#dgSpark)"/>
+
+  <!-- leaf sprig growing from the base -->
+  <g fill="url(#dgGold)">
+    <path d="M100 172 C99 148 99 128 100 108" stroke="url(#dgGold)" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <path d="M100 150 C82 146 70 132 66 116 C86 118 98 130 100 150 Z"/>
+    <path d="M100 132 C118 128 130 116 134 100 C114 102 102 114 100 132 Z"/>
+    <path d="M100 116 C88 111 80 100 77 88 C93 90 101 100 100 116 Z" opacity=".92"/>
+  </g>
+</svg>

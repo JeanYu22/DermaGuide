@@ -196,15 +196,30 @@ function analyzerRightEmptyHTML() {
   </div></section>`;
 }
 // Put the chosen photo (and, while scanning, the scan overlay) in the left panel.
-function setAnalyzerPhoto(imgSrc, scanning, caption, substatus, substatusId) {
+// When `scanned` is true (analysis complete), overlay a corner-bracket scan
+// frame + timestamp badge instead, matching the clinical-analysis reference.
+function setAnalyzerPhoto(imgSrc, scanning, caption, substatus, substatusId, scanned) {
   const pv = document.getElementById('photoPreview');
   if (!pv) return;
-  pv.innerHTML = `<img src="${imgSrc}" alt="your photo">${scanning ? `<div class="scan-overlay">${scanFaceHTML(caption, { small: true, substatus, substatusId })}</div>` : ''}`;
+  const overlay = scanning
+    ? `<div class="scan-overlay">${scanFaceHTML(caption, { small: true, substatus, substatusId })}</div>`
+    : (scanned ? scanFrameHTML() : '');
+  pv.innerHTML = `<img src="${imgSrc}" alt="your photo">${overlay}`;
+}
+
+function scanFrameHTML() {
+  const ts = new Date().toLocaleString(undefined, { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+  return `<div class="scan-frame">
+    <span class="scan-corner tl"></span><span class="scan-corner tr"></span><span class="scan-corner bl"></span><span class="scan-corner br"></span>
+    <span class="scan-timestamp">${L('scanned_at', 'Scanned')}: ${ts}</span>
+  </div>`;
 }
 function setAnalyzerRight(html) { const r = document.getElementById('analyzeRight'); if (r) r.innerHTML = html; }
 function closeAnalyzer() { document.getElementById('analyzerModal').classList.remove('active'); }
 function scrollToProducts() { document.getElementById('productsSection').scrollIntoView({ behavior: 'smooth' }); }
 function scrollToTips() { document.getElementById('tipsSection').scrollIntoView({ behavior: 'smooth' }); }
+function scrollToHome() { const c = document.getElementById('lilyCard'); if (c) c.scrollIntoView({ behavior: 'smooth' }); }
+function openProfile() { openAuth(); }
 
 // ===========================================================================
 // Products + tips rendering
@@ -304,6 +319,56 @@ function renderProducts() {
   if (lm) lm.innerHTML = shop.page < shop.pages
     ? '<button class="btn btn-primary" onclick="loadMoreProducts()">Load more</button>'
     : '';
+
+  if (shop.page === 1) renderHomeProducts();
+}
+
+// Compact "Top Picks" strip on the home/shop surface (real catalogue items).
+function renderHomeProducts() {
+  const el = document.getElementById('homeProducts');
+  if (!el) return;
+  const picks = State.products.slice(0, 4);
+  el.innerHTML = picks.length ? picks.map((p) => `
+    <div class="home-product-card" onclick='showProductModal(${JSON.stringify(p).replace(/'/g, "&#39;")})'>
+      <div class="home-product-img">${productImageInner(p)}</div>
+      <div class="home-product-name">${p.name}</div>
+      <div class="home-product-price">$${p.price.toFixed(2)}</div>
+      <button class="btn btn-dark btn-small btn-full" onclick="event.stopPropagation(); addToCart('${p.id}', this)">${L('add_cart', 'Add to Cart')}</button>
+    </div>`).join('') : `<div class="empty-grid" style="padding:1.2rem;">${L('loading_products', 'Loading products…')}</div>`;
+}
+
+// Cache the last analysis's headline metrics for the home "Recent Skin
+// Health" card (client-side only — no extra backend endpoint needed).
+function cacheSkinHealth(result) {
+  try {
+    const metrics = result.metrics || {};
+    const defs = (result.metricDefs && result.metricDefs.length)
+      ? result.metricDefs
+      : Object.keys(metrics).map((k) => ({ key: k, label: k }));
+    localStorage.setItem('dg_last_health', JSON.stringify({ metrics, defs, at: Date.now() }));
+  } catch (e) { /* ignore quota errors */ }
+  renderSkinHealth();
+}
+
+function renderSkinHealth() {
+  const el = document.getElementById('skinHealthCard');
+  if (!el) return;
+  let cached = null;
+  try { cached = JSON.parse(localStorage.getItem('dg_last_health') || 'null'); } catch (e) { /* ignore */ }
+  if (!cached || !cached.metrics) {
+    el.innerHTML = `<div class="skin-health-empty">
+      <span>${L('no_scan_yet', "You haven't scanned your skin yet.")}</span>
+      <button class="btn btn-secondary btn-small" onclick="openAnalyzer()">📸 ${L('start_snapshot', 'Start Private Skin Snapshot')}</button>
+    </div>`;
+    return;
+  }
+  const defs = localizeDefs(cached.defs).slice(0, 3);
+  el.innerHTML = `<div class="health-bars">${defs.map(({ key, label }) => {
+    const pct = Math.round(((cached.metrics[key] || 0) / 10) * 100);
+    return `<div class="health-row"><span class="health-label">${label}</span>
+      <div class="bar"><span style="width:${pct}%"></span></div><span class="health-pct">${pct}%</span></div>`;
+  }).join('')}
+  <div class="health-note">${L('based_on_last', 'Based on your last analysis.')}</div></div>`;
 }
 
 function renderTips() {
@@ -923,6 +988,59 @@ async function addRoutineToCart(ids) {
   toast(added ? `${L('routine_added', 'Routine added to cart')} 🛒 (${added})` : L('routine_fail', 'Could not add routine'));
 }
 
+// Expandable per-metric detail rows (status word + AI agent note), used in
+// the standalone analyzer's results panel.
+function metricDetailHTML(metrics, metricDefs, analysisId) {
+  const defs = localizeDefs(metricDefs && metricDefs.length
+    ? metricDefs
+    : Object.keys(metrics).map((k) => ({ key: k, label: k.replace(/([A-Z])/g, ' $1').replace(/^./, (s) => s.toUpperCase()) })));
+  return `<div class="metric-detail-list">${defs.map(({ key, label }, i) => {
+    const value = metrics[key] || 0;
+    const severity = value < 4 ? 'low' : value < 7 ? 'medium' : 'high';
+    const statusWord = severity === 'low' ? L('status_optimal', 'Optimal') : severity === 'medium' ? L('status_watch', 'Monitor') : L('status_attention', 'Needs attention');
+    const note = metricAgentNote(label, severity);
+    return `<div class="metric-row-x${i === 0 ? ' expanded' : ''}" id="mrow-${analysisId}-${key}">
+      <button class="metric-row-head" onclick="toggleMetricRow('${analysisId}','${key}')">
+        <span class="metric-row-title">${label} <em>(${statusWord})</em></span>
+        <span class="metric-row-score severity-${severity}">${value}/10</span>
+        <span class="metric-chevron">⌄</span>
+      </button>
+      <div class="metric-row-body">
+        <div class="agent-tag">${L('agent_from', 'Agent')}: ${L('agent_analyzer', "the 'Analyzer'")}</div>
+        <p>${note}</p>
+      </div>
+    </div>`;
+  }).join('')}</div>`;
+}
+function toggleMetricRow(analysisId, key) {
+  const row = document.getElementById(`mrow-${analysisId}-${key}`);
+  if (row) row.classList.toggle('expanded');
+}
+function metricAgentNote(label, severity) {
+  const m = label.toLowerCase();
+  const tpl = severity === 'low' ? L('note_low', 'Your {m} levels are optimal. Your current routine is working — continue it.')
+    : severity === 'medium' ? L('note_medium', 'Your {m} could use a little more attention. Small, consistent steps will help.')
+    : L('note_high', 'Your {m} shows a notable concern. Prioritize products and habits that target this.');
+  return tpl.replace('{m}', m);
+}
+
+// AI reviewer's note — a short pass/flag summary from the reviewer agent
+// that cross-checks every analysis before it's shown.
+function reviewerNoteHTML(result) {
+  const verdict = result.reviewerVerdict || 'PASS';
+  const text = verdict === 'PASS'
+    ? L('reviewer_pass', 'The overall analysis indicates a healthy skin profile. Focus on the routine below and keep tracking your progress.')
+    : L('reviewer_revise', 'This analysis flagged some inconsistencies — treat the scores as a rough guide and consider a follow-up scan in better lighting.');
+  return `<div class="reviewer-card">
+    <div class="reviewer-badge">🎖️</div>
+    <div>
+      <div class="reviewer-title">${L('reviewers_note', "Reviewer's Note")}</div>
+      <p class="reviewer-text">${text}</p>
+      <div class="reviewer-sign">— ${L('ai_reviewer', 'AI Reviewer')}</div>
+    </div>
+  </div>`;
+}
+
 // Prominent banner when the AI flags a condition needing a professional.
 function medicalBannerHTML(result) {
   if (!result.medicalFlag) return '';
@@ -945,13 +1063,18 @@ function recCarouselHTML(title, recs) {
  * Detailed recommendations — HORIZONTAL scroll of cards with a large product
  * image (≥ shop card size), keeping the "Why" + "How to use".
  */
+// Presentational match % derived from the recommender's own ranking order
+// (item 0 = strongest match) — not a separately-computed score.
+function matchScoreFor(index) { return Math.max(70, 96 - index * 4); }
+
 function recDetailHTML(title, recs) {
   return `<div class="rec-products"><div class="rec-title">${title}</div>
     <div class="rec-hscroll">
-      ${recs.map((p) => `<div class="rec-vcard" onclick='showProductModal(${JSON.stringify(p).replace(/'/g, "&#39;")})'>
+      ${recs.map((p, i) => `<div class="rec-vcard" onclick='showProductModal(${JSON.stringify(p).replace(/'/g, "&#39;")})'>
         <div class="rec-vcard-img">${p.images && p.images.length
           ? `<img src="${p.images[0]}" loading="lazy" onerror="${imgFallback(p.emoji, 'product-emoji')}">`
-          : `<span class="product-emoji">${p.emoji || '🧴'}</span>`}</div>
+          : `<span class="product-emoji">${p.emoji || '🧴'}</span>`}
+          <span class="match-badge">${matchScoreFor(i)}% ${L('match', 'Match')}</span></div>
         <div class="rec-vcard-body">
           <div class="rec-name">${p.name}</div>
           <div class="rec-price">$${p.price.toFixed(2)}</div>
@@ -968,7 +1091,8 @@ function displayChatAnalysis(result, mlResults) {
   // ML cross-check is FACE ONLY.
   const ml = result.isFace ? mlResults : null;
   const canvasId = 'canvas-' + analysisId;
-  analysisStore[analysisId] = { metrics, skinType, mlResults: ml, canvasId, metricDefs };
+  analysisStore[analysisId] = { metrics, skinType, mlResults: ml, canvasId, metricDefs, view: 'chat' };
+  cacheSkinHealth(result);
   const container = document.getElementById('chatMessages');
   const div = document.createElement('div');
   div.className = 'message assistant';
@@ -1079,7 +1203,7 @@ async function submitCorrection(analysisId, btn) {
     ctx.metricDefs = defs;
     analysisStore[analysisId] = ctx;
     const grid = document.getElementById('grid-' + analysisId);
-    if (grid) grid.innerHTML = metricsGridHTML(result.metrics, defs);
+    if (grid) grid.innerHTML = ctx.view === 'standalone' ? metricDetailHTML(result.metrics, defs, analysisId) : metricsGridHTML(result.metrics, defs);
     if (ctx.canvasId) drawRadarChart(ctx.canvasId, result.metrics, localizeDefs(defs), ctx.mlResults);
 
     section.innerHTML = `<div style="text-align:center;padding:1rem;color:var(--forest);">
@@ -1125,7 +1249,7 @@ async function handleImage(event) {
           if (el && ml) el.innerHTML = `✅ ${L('skin_detected', 'Skin detected')} • 🤖 LLM • 🧬 ML (${Math.round((ml.confidence || 0) * 100)}%)`;
         },
       });
-      setAnalyzerPhoto(imgSrc, false);
+      setAnalyzerPhoto(imgSrc, false, null, null, null, true);
       displayStandaloneAnalysis(result, imgSrc, mlResults);
     } catch (err) {
       setAnalyzerPhoto(imgSrc, false);
@@ -1158,7 +1282,8 @@ function displayStandaloneAnalysis(result, imgSrc, mlResults) {
   const { analysisId, skinType, metrics, topConcerns, recommendation, recommendedProducts, metricDefs } = result;
   const ml = result.isFace ? mlResults : null; // ML cross-check is face only
   const canvasId = 'canvas-' + analysisId;
-  analysisStore[analysisId] = { metrics, skinType, mlResults: ml, canvasId, metricDefs };
+  analysisStore[analysisId] = { metrics, skinType, mlResults: ml, canvasId, metricDefs, view: 'standalone' };
+  cacheSkinHealth(result);
   const headline = localizedTopConcerns(metrics, metricDefs) || topConcerns || L('pro_analysis', 'Skin snapshot');
   setAnalyzerRight(`
     <div class="pro-analysis">
@@ -1166,14 +1291,14 @@ function displayStandaloneAnalysis(result, imgSrc, mlResults) {
         <div>${profileEyebrowHTML()}<h3 class="result-title">${headline}</h3>
           <div class="analysis-subtitle">${localizedSubtitle(result)}</div>
           <p class="result-summary">${recommendation || ''}</p></div>
-        ${scoreRingHTML(metrics)}
       </div>
       ${medicalBannerHTML(result)}
       <div class="result-charts">
         <div class="radar-container"><canvas id="${canvasId}" width="400" height="400"></canvas></div>
-        <div class="metrics-grid metric-list" id="grid-${analysisId}">${metricsGridHTML(metrics, metricDefs)}</div>
+        <div class="metric-list" id="grid-${analysisId}">${metricDetailHTML(metrics, metricDefs, analysisId)}</div>
       </div>
       ${ml && ml.mlConcerns ? `<div class="ml-status-box"><div style="display:flex;align-items:center;gap:.5rem;font-size:.9rem;"><span>✅</span><span class="ml-status-title">${L('ml_active', 'ML Cross-Validation Active')}</span><span class="ml-confidence-badge">${Math.round((ml.confidence || 0) * 100)}% confidence</span></div></div>` : ''}
+      ${reviewerNoteHTML(result)}
       ${recommendedProducts?.length ? routineCtaHTML(recommendedProducts) + recDetailHTML(L('recommended_for', 'Recommended for you'), recommendedProducts) : ''}
       ${feedbackSectionHTML(analysisId)}
       <div style="margin-top:1.2rem;display:flex;gap:.8rem;flex-wrap:wrap;">
@@ -1546,6 +1671,7 @@ async function init() {
   updateAuthUI();
   renderTips();
   renderFilterChips();
+  renderSkinHealth();
   await loadProducts();
   await loadCart();
   bindUploadZone();

@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>DermaGuide - AI Skincare Concierge</title>
+    <link rel="icon" type="image/svg+xml" href="/img/logo.svg">
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- TensorFlow.js for in-browser ML skin cross-validation -->
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.11.0/dist/tf.min.js"></script>
@@ -17,7 +18,7 @@
         <div class="landing-inner">
             <section class="hero">
                 <div class="hero-copy">
-                    <div class="hero-brand">DermaGuide</div>
+                    <div class="hero-brand"><span class="brand-mark"><img src="/img/logo.svg" alt=""></span><span class="brand-name"><span class="brand-word-derma">Derma</span><span class="brand-word-guide">Guide</span></span></div>
                     <div class="hero-eyebrow" data-i18n="hero_eyebrow">AI skincare concierge + commerce</div>
                     <h1 class="hero-title" data-i18n="hero_title">Know your skin. Care with confidence.</h1>
                     <p class="hero-sub" data-i18n="hero_sub">AI-powered skin analysis and personalised organic skincare — guided by Lily, your virtual consultant.</p>
@@ -61,12 +62,20 @@
     <div class="shop-view" id="shopView">
         <div class="header">
             <div class="header-content">
-                <div class="brand"><span class="brand-mark" aria-hidden="true">🌿</span> DermaGuide</div>
+                <div class="brand"><span class="brand-mark"><img src="/img/logo.svg" alt=""></span><span class="brand-name"><span class="brand-word-derma">Derma</span><span class="brand-word-guide">Guide</span></span></div>
                 <div class="header-actions">
                     <div class="lang-switch" id="headerLang"></div>
                     <button class="header-link" id="authLink" onclick="openAuth()" data-i18n="sign_in">Sign In</button>
                     <button class="header-icon" onclick="openCart()">🛒<span class="cart-count" id="cartCount" data-count="0"></span></button>
                 </div>
+            </div>
+        </div>
+
+        <div class="lily-card" id="lilyCard">
+            <div class="lily-card-avatar" data-lily></div>
+            <div class="lily-card-body">
+                <p class="lily-card-text" data-i18n="lily_greeting">Hi, I'm Lily, your AI skincare guide. Ready to analyze your skin?</p>
+                <button class="btn btn-gold btn-full" onclick="openAnalyzer()">📷 <span data-i18n="start_skin_analysis">Start Skin Analysis</span></button>
             </div>
         </div>
 
@@ -76,6 +85,16 @@
             <div class="action-card" onclick="scrollToTips()"><div class="action-icon">💡</div><div class="action-title" data-i18n="qa_tips">Skincare Tips</div></div>
             <div class="action-card" onclick="scrollToProducts()"><div class="action-icon">🛍️</div><div class="action-title" data-i18n="qa_shopall">Shop All</div></div>
         </div>
+
+        <div class="section-header">
+            <h2 class="section-title" data-i18n="top_picks">Top Picks for You</h2>
+        </div>
+        <div class="home-products" id="homeProducts"></div>
+
+        <div class="section-header">
+            <h2 class="section-title" data-i18n="recent_skin_health">Recent Skin Health</h2>
+        </div>
+        <div class="skin-health-card" id="skinHealthCard"></div>
 
         <div class="section-header">
             <h2 class="section-title" data-i18n="shop_title">Shop Products</h2>
@@ -94,9 +113,10 @@
         <div class="tips-grid" id="tipsGrid"></div>
 
         <div class="bottom-nav">
-            <div class="nav-item" onclick="scrollToProducts()"><div class="nav-icon">🏠</div><div class="nav-label" data-i18n="nav_shop">Shop</div></div>
-            <div class="nav-item" onclick="openChat()"><div class="nav-icon">💬</div><div class="nav-label" data-i18n="nav_chat">Chat</div></div>
-            <div class="nav-item" onclick="openAnalyzer()"><div class="nav-icon">📸</div><div class="nav-label" data-i18n="nav_analyze">Analyze</div></div>
+            <div class="nav-item" onclick="scrollToHome()"><div class="nav-icon">🏠</div><div class="nav-label" data-i18n="nav_home">Home</div></div>
+            <div class="nav-item" onclick="openAnalyzer()"><div class="nav-icon">📸</div><div class="nav-label" data-i18n="nav_analyze">Analysis</div></div>
+            <div class="nav-item" onclick="scrollToProducts()"><div class="nav-icon">🛍️</div><div class="nav-label" data-i18n="nav_shop">Shop</div></div>
+            <div class="nav-item" onclick="openProfile()"><div class="nav-icon">👤</div><div class="nav-label" data-i18n="nav_profile">Profile</div></div>
         </div>
 
         <div class="ai-assistant" id="aiAssistant">

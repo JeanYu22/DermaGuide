@@ -1,6 +1,6 @@
 {
   "name": "dermaguide",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "DermaGuide — Trust-First, AI-Powered Personal Skincare Consultant and Commerce Engine.",
   "main": "src/server.js",
   "scripts": {
