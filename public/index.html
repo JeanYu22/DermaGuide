@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>PureGlow - Organic Skincare Shop</title>
+    <title>DermaGuide - AI Skincare Concierge</title>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- TensorFlow.js for in-browser ML skin cross-validation -->
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.11.0/dist/tf.min.js"></script>
@@ -17,12 +17,18 @@
         <div class="landing-inner">
             <section class="hero">
                 <div class="hero-copy">
-                    <div class="hero-brand">🌿 PureGlow</div>
+                    <div class="hero-brand">DermaGuide</div>
+                    <div class="hero-eyebrow" data-i18n="hero_eyebrow">AI skincare concierge + commerce</div>
                     <h1 class="hero-title" data-i18n="hero_title">Know your skin. Care with confidence.</h1>
                     <p class="hero-sub" data-i18n="hero_sub">AI-powered skin analysis and personalised organic skincare — guided by Lily, your virtual consultant.</p>
                     <div class="hero-buttons">
                         <button class="btn btn-primary" onclick="enterShop()" data-i18n="get_started">Get Started</button>
                         <button class="btn btn-secondary" onclick="quickAnalyze()" data-i18n="quick_analysis">Quick Skin Analysis</button>
+                    </div>
+                    <div class="hero-trust">
+                        <span data-i18n="trust_photo">✓ Photo never stored</span>
+                        <span data-i18n="trust_checked">✓ Reviewer-checked picks</span>
+                        <span data-i18n="trust_secure">✓ Secure checkout</span>
                     </div>
                 </div>
                 <!-- Stylized animated "AI nurse" avatar -->
@@ -58,7 +64,7 @@
     <div class="shop-view" id="shopView">
         <div class="header">
             <div class="header-content">
-                <div class="brand">🌿 PureGlow</div>
+                <div class="brand"><span class="brand-mark" aria-hidden="true">🌿</span> DermaGuide</div>
                 <div class="header-actions">
                     <div class="lang-switch" id="headerLang"></div>
                     <button class="header-link" id="authLink" onclick="openAuth()" data-i18n="sign_in">Sign In</button>

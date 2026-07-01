@@ -329,12 +329,12 @@ function drawRadarChart(canvasId, metrics, metricDefs, mlResults = null) {
     ml = metricDefs.map((d) => mlValueForKey(d.key, mlResults.mlConcerns));
   }
 
-  ctx.strokeStyle = '#E8DCC4'; ctx.lineWidth = 1;
+  const dark = document.body.classList.contains('dark');
+  ctx.strokeStyle = dark ? 'rgba(244,233,226,.14)' : 'rgba(47,37,35,.1)'; ctx.lineWidth = 1;
   for (let i = 1; i <= 5; i++) { ctx.beginPath(); ctx.arc(cx, cy, (maxR / 5) * i, 0, Math.PI * 2); ctx.stroke(); }
 
-  const dark = document.body.classList.contains('dark');
-  ctx.strokeStyle = dark ? '#555' : '#D4D4D4';
-  ctx.fillStyle = dark ? '#E8DCC4' : '#2D3142';
+  ctx.strokeStyle = dark ? 'rgba(244,233,226,.16)' : 'rgba(47,37,35,.14)';
+  ctx.fillStyle = dark ? '#cbb6ac' : '#62504b';
   ctx.font = '11px Inter';
   for (let i = 0; i < n; i++) {
     const ang = (Math.PI * 2 / n) * i - Math.PI / 2;
@@ -344,7 +344,7 @@ function drawRadarChart(canvasId, metrics, metricDefs, mlResults = null) {
   }
 
   if (ml) {
-    ctx.beginPath(); ctx.fillStyle = 'rgba(144,238,144,0.15)'; ctx.strokeStyle = '#90EE90'; ctx.lineWidth = 2; ctx.setLineDash([5, 5]);
+    ctx.beginPath(); ctx.fillStyle = 'rgba(143,185,201,0.18)'; ctx.strokeStyle = '#5b93b3'; ctx.lineWidth = 2; ctx.setLineDash([5, 5]);
     for (let i = 0; i < n; i++) {
       const ang = (Math.PI * 2 / n) * i - Math.PI / 2; const rad = maxR * (ml[i] / 10);
       const x = cx + Math.cos(ang) * rad, y = cy + Math.sin(ang) * rad;
@@ -353,7 +353,7 @@ function drawRadarChart(canvasId, metrics, metricDefs, mlResults = null) {
     ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.setLineDash([]);
   }
 
-  ctx.beginPath(); ctx.fillStyle = 'rgba(124,148,115,0.3)'; ctx.strokeStyle = '#7C9473'; ctx.lineWidth = 2.5;
+  ctx.beginPath(); ctx.fillStyle = 'rgba(232,111,92,0.24)'; ctx.strokeStyle = '#e86f5c'; ctx.lineWidth = 2.5;
   for (let i = 0; i < n; i++) {
     const ang = (Math.PI * 2 / n) * i - Math.PI / 2; const rad = maxR * (llm[i] / 10);
     const x = cx + Math.cos(ang) * rad, y = cy + Math.sin(ang) * rad;
@@ -361,7 +361,7 @@ function drawRadarChart(canvasId, metrics, metricDefs, mlResults = null) {
   }
   ctx.closePath(); ctx.fill(); ctx.stroke();
 
-  ctx.fillStyle = '#5F6F52';
+  ctx.fillStyle = '#c95445';
   for (let i = 0; i < n; i++) {
     const ang = (Math.PI * 2 / n) * i - Math.PI / 2; const rad = maxR * (llm[i] / 10);
     ctx.beginPath(); ctx.arc(cx + Math.cos(ang) * rad, cy + Math.sin(ang) * rad, 4, 0, Math.PI * 2); ctx.fill();
@@ -369,10 +369,10 @@ function drawRadarChart(canvasId, metrics, metricDefs, mlResults = null) {
 
   if (ml) {
     const ly = 392; ctx.font = '10px Inter';
-    const tc = dark ? '#E8DCC4' : '#2D3142';
-    ctx.fillStyle = '#7C9473'; ctx.fillRect(70, ly, 20, 3);
+    const tc = dark ? '#cbb6ac' : '#62504b';
+    ctx.fillStyle = '#e86f5c'; ctx.fillRect(70, ly, 20, 3);
     ctx.fillStyle = tc; ctx.textAlign = 'left'; ctx.fillText('LLM Analysis', 95, ly + 3);
-    ctx.strokeStyle = '#90EE90'; ctx.lineWidth = 2; ctx.setLineDash([3, 3]);
+    ctx.strokeStyle = '#5b93b3'; ctx.lineWidth = 2; ctx.setLineDash([3, 3]);
     ctx.beginPath(); ctx.moveTo(200, ly + 1.5); ctx.lineTo(220, ly + 1.5); ctx.stroke(); ctx.setLineDash([]);
     ctx.fillStyle = tc; ctx.fillText('ML Cross-Validation', 225, ly + 3);
   }

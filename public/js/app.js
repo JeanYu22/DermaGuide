@@ -760,8 +760,28 @@ function metricsGridHTML(metrics, metricDefs) {
   return defs.map(({ key, label }) => {
     const value = metrics[key] || 0;
     const severity = value < 4 ? 'low' : value < 7 ? 'medium' : 'high';
-    return `<div class="metric-item"><span class="metric-label">${label}</span><span class="metric-score severity-${severity}">${value}/10</span></div>`;
+    return `<div class="metric-item">
+      <div class="metric-row"><span class="metric-label">${label}</span><span class="metric-score severity-${severity}">${value}/10</span></div>
+      <div class="meter sev-${severity}"><span style="width:${value * 10}%"></span></div>
+    </div>`;
   }).join('');
+}
+
+// Overall skin-wellness score (0-100). Metrics are *concern* scores where
+// higher = more of an issue, so we invert the average into a positive score.
+function overallScore(metrics) {
+  const vals = Object.values(metrics || {}).filter((v) => typeof v === 'number');
+  if (!vals.length) return null;
+  const avg = vals.reduce((a, b) => a + b, 0) / vals.length; // 0-10
+  return Math.max(12, Math.min(99, Math.round(100 - avg * 9)));
+}
+
+// Conic score-ring gauge shown in the analysis header (matches dashboard style).
+function scoreRingHTML(metrics) {
+  const s = overallScore(metrics);
+  if (s == null) return '';
+  return `<div class="score-ring" style="--pct:${s}%" title="${L('overall_score', 'Overall skin score')}">
+    <span>${s}<small>${L('score_lbl', 'SCORE')}</small></span></div>`;
 }
 
 // Prominent banner when the AI flags a condition needing a professional.
@@ -817,8 +837,11 @@ function displayChatAnalysis(result, mlResults) {
     <div class="message-label">Lily</div>
     <div class="message-bubble">
       <div class="pro-analysis">
-        <div class="analysis-header"><h3>${L('pro_analysis', 'Professional Skin Analysis')}</h3>
+        <div class="analysis-header"><div class="analysis-head-row">
+          <div><h3>${L('pro_analysis', 'Professional Skin Analysis')}</h3>
           <div class="analysis-subtitle">${localizedSubtitle(result)}</div></div>
+          ${scoreRingHTML(metrics)}
+        </div></div>
         ${medicalBannerHTML(result)}
         <div class="radar-container"><canvas id="${canvasId}" width="400" height="400"></canvas></div>
         <div class="metrics-grid" id="grid-${analysisId}">${metricsGridHTML(metrics, metricDefs)}</div>
@@ -989,7 +1012,10 @@ function displayStandaloneAnalysis(result, imgSrc, mlResults) {
   content.innerHTML = `
     <img src="${imgSrc}" class="preview-img">
     <div class="pro-analysis">
-      <div class="analysis-header"><h3>${L('pro_analysis', 'Professional Skin Analysis')}</h3><div class="analysis-subtitle">${localizedSubtitle(result)}</div></div>
+      <div class="analysis-header"><div class="analysis-head-row">
+        <div><h3>${L('pro_analysis', 'Professional Skin Analysis')}</h3><div class="analysis-subtitle">${localizedSubtitle(result)}</div></div>
+        ${scoreRingHTML(metrics)}
+      </div></div>
       ${medicalBannerHTML(result)}
       <div class="radar-container"><canvas id="${canvasId}" width="400" height="400"></canvas></div>
       <div class="metrics-grid" id="grid-${analysisId}">${metricsGridHTML(metrics, metricDefs)}</div>

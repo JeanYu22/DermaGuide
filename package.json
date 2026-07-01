@@ -1,7 +1,7 @@
 {
   "name": "dermaguide",
-  "version": "1.3.0",
-  "description": "Trust-First, AI-Powered Personal Skincare Consultant and Commerce Engine (PureGlow).",
+  "version": "1.4.0",
+  "description": "DermaGuide — Trust-First, AI-Powered Personal Skincare Consultant and Commerce Engine.",
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
