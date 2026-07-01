@@ -35,7 +35,7 @@
                 <div class="nurse" aria-hidden="true">
                     <div class="nurse-orbit"></div>
                     <div class="nurse-avatar">
-                        <div class="nurse-face">👩‍⚕️</div>
+                        <div class="nurse-face" data-lily>👩‍⚕️</div>
                         <div class="nurse-pulse"></div>
                     </div>
                     <div class="nurse-bubble">
@@ -109,7 +109,7 @@
             </div>
             <div class="assistant-character" onclick="openChatFromAssistant()">
                 <div class="close-assistant" onclick="event.stopPropagation(); dismissAssistant()">×</div>
-                <div class="assistant-avatar"><div class="assistant-face">👩‍⚕️</div></div>
+                <div class="assistant-avatar"><div class="assistant-face" data-lily>👩‍⚕️</div></div>
                 <div class="assistant-status"></div>
             </div>
         </div>
@@ -119,7 +119,7 @@
     <div class="chat-modal" id="chatModal">
         <div class="chat-header">
             <button class="back-btn" onclick="closeChat()">←</button>
-            <div class="chat-title">👩‍⚕️ <span data-i18n="chat_title">Lily · Skincare Consultant</span></div>
+            <div class="chat-title"><span class="lily-badge" data-lily>👩‍⚕️</span> <span data-i18n="chat_title">Lily · Skincare Consultant</span></div>
         </div>
         <div class="chat-messages" id="chatMessages">
             <div class="message assistant">

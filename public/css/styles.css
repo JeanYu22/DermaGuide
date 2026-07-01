@@ -509,3 +509,78 @@ h1, h2, h3, h4 { font-family: 'Playfair Display', Georgia, serif; letter-spacing
 @media (min-width: 768px) {
     .quick-actions { grid-template-columns: repeat(4, 1fr); }
 }
+
+/* =====================================================================
+   Lily — animated illustrated care agent (replaces the static emoji)
+   ===================================================================== */
+.lily-svg { width: 100%; height: 100%; display: block; }
+.nurse-avatar, .assistant-avatar { overflow: hidden; }
+/* Blink + subtle "breathing" head bob + warm mouth on the illustration */
+.lily-eyes { transform-origin: 60px 52px; animation: lilyBlink 5.4s infinite; }
+@keyframes lilyBlink { 0%, 93%, 100% { transform: scaleY(1); } 96% { transform: scaleY(.12); } }
+.lily-head { transform-origin: 60px 60px; animation: lilyBreathe 4.2s ease-in-out infinite; }
+@keyframes lilyBreathe { 0%,100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-1.4px) rotate(-1.2deg); } }
+.lily-mouth { animation: lilyTalk 3.6s ease-in-out infinite; transform-origin: 60px 66px; }
+@keyframes lilyTalk { 0%,72%,100% { transform: scaleY(1); } 84% { transform: scaleY(1.5); } }
+.lily-mic { animation: lilyMic 2.2s ease-in-out infinite; }
+@keyframes lilyMic { 0%,100% { opacity: .7; } 50% { opacity: 1; } }
+.chat-title .lily-badge { width: 34px; height: 34px; border-radius: 11px; overflow: hidden; display: inline-grid; place-items: center; vertical-align: middle; margin-inline-end: .1rem;
+    background: radial-gradient(circle at 50% 34%, #fff, var(--clinical-blue)); box-shadow: 0 6px 16px rgba(91,147,179,.3); }
+
+/* Guided welcome coach — Lily leads the first-time user */
+.coach-overlay { position: fixed; inset: 0; z-index: 320; display: grid; place-items: center; padding: 1.2rem;
+    background: rgba(47,37,35,.42); backdrop-filter: blur(6px); animation: fadeIn .3s; }
+.coach-card { width: min(420px, 100%); background: var(--pearl); border: 1px solid var(--line); border-radius: var(--radius-lg);
+    box-shadow: var(--shadow); padding: 1.6rem 1.4rem; text-align: center; animation: slideUp .35s ease; }
+.coach-avatar { width: 108px; height: 108px; margin: 0 auto .9rem; border-radius: 50%; overflow: hidden; border: 5px solid var(--pearl);
+    background: radial-gradient(circle at 50% 34%, #fff 0%, var(--clinical-blue) 60%, var(--clinical-deep) 100%);
+    box-shadow: 0 16px 36px rgba(91,147,179,.32); }
+.coach-title { font-family: 'Playfair Display', Georgia, serif; font-size: 1.5rem; color: var(--deep-cocoa); margin-bottom: .5rem; }
+.coach-text { color: var(--cocoa-soft); line-height: 1.6; margin-bottom: 1rem; }
+.coach-steps { display: flex; gap: .5rem; justify-content: center; flex-wrap: wrap; margin-bottom: 1.2rem; }
+.coach-step { display: inline-flex; align-items: center; gap: .4rem; font-size: .82rem; font-weight: 800; color: var(--clinical-deep);
+    background: rgba(143,185,201,.14); border: 1px solid rgba(143,185,201,.3); border-radius: 999px; padding: .42rem .7rem; }
+.coach-step b { width: 20px; height: 20px; border-radius: 999px; background: var(--clinical-deep); color: #fff; display: grid; place-items: center; font-size: .72rem; }
+.coach-card .btn { margin-top: .55rem; }
+
+/* =====================================================================
+   Clinical face-scan processing animation (echoes the promo device)
+   ===================================================================== */
+.face-scan { position: relative; width: 176px; height: 176px; margin: 0 auto 1.1rem; display: grid; place-items: center; }
+.face-scan.sm { width: 116px; height: 116px; margin-bottom: .6rem; }
+.fs-ring { position: absolute; inset: 0; border-radius: 50%; animation: spin 2.6s linear infinite;
+    background: conic-gradient(from 0deg, rgba(143,185,201,0) 0deg, rgba(143,185,201,.15) 60deg, var(--clinical-blue) 180deg, var(--clinical-deep) 250deg, rgba(143,185,201,0) 330deg);
+    -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 8px), #000 calc(100% - 7px));
+    mask: radial-gradient(farthest-side, transparent calc(100% - 8px), #000 calc(100% - 7px));
+    filter: drop-shadow(0 0 9px rgba(91,147,179,.6)); }
+.fs-ring.fs-ring2 { inset: 11px; animation-duration: 3.8s; animation-direction: reverse; opacity: .55;
+    background: conic-gradient(from 90deg, rgba(232,111,92,0) 0deg, rgba(232,111,92,.45) 120deg, rgba(232,111,92,0) 240deg); filter: drop-shadow(0 0 6px rgba(232,111,92,.4)); }
+.fs-core { position: relative; width: 74%; height: 74%; border-radius: 50%; overflow: hidden; display: grid; place-items: center;
+    background: radial-gradient(circle at 50% 38%, #ffffff, #eaf3f7);
+    box-shadow: inset 0 0 26px rgba(91,147,179,.28); animation: ringGlow 2.6s ease-in-out infinite; }
+.fs-mesh { width: 84%; height: 84%; opacity: .92; }
+.fs-sweep { position: absolute; left: 0; right: 0; top: 0; height: 22%;
+    background: linear-gradient(180deg, rgba(94,200,229,0), rgba(94,200,229,.5) 55%, rgba(94,200,229,0));
+    filter: blur(1px); animation: fsSweep 2.2s ease-in-out infinite; }
+@keyframes fsSweep { 0% { top: -6%; } 50% { top: 84%; } 100% { top: -6%; } }
+.fs-hex { position: absolute; width: 13px; height: 13px; opacity: 0; background: var(--clinical-deep);
+    clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);
+    box-shadow: 0 0 8px rgba(91,147,179,.7); animation: hexPulse 2.6s ease-in-out infinite; }
+.fs-hex.h2, .fs-hex.h4, .fs-hex.h6 { background: var(--coral); box-shadow: 0 0 8px rgba(232,111,92,.6); }
+@keyframes hexPulse { 0%, 100% { opacity: 0; transform: scale(.5); } 42% { opacity: 1; transform: scale(1); } 70% { opacity: .35; } }
+.fs-caption { text-align: center; font-weight: 700; color: var(--cocoa-soft); font-size: .92rem; }
+.fs-substatus { text-align: center; font-size: .82rem; color: var(--clinical-deep); margin-top: .35rem; }
+
+/* =====================================================================
+   Analysis module extras — profile eyebrow chip + routine CTA
+   ===================================================================== */
+.profile-eyebrow { display: inline-flex; align-items: center; gap: .45rem; padding: .34rem .72rem; border-radius: 999px;
+    background: rgba(168,191,168,.18); border: 1px solid rgba(168,191,168,.4); color: var(--sage-dark);
+    font-weight: 800; font-size: .76rem; margin-bottom: .6rem; }
+.profile-eyebrow::before { content: ""; width: 8px; height: 8px; border-radius: 999px; background: var(--sage-dark); box-shadow: 0 0 0 4px rgba(110,143,115,.18); }
+.routine-cta { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;
+    margin-top: 1.2rem; padding: 1rem 1.1rem; border-radius: var(--radius-md); border: 1px solid var(--line);
+    background: linear-gradient(135deg, rgba(233,183,167,.2), rgba(168,191,168,.16)); }
+.routine-cta-title { font-weight: 800; color: var(--deep-cocoa); }
+.routine-cta-sub { font-size: .86rem; color: var(--cocoa-soft); margin-top: .15rem; }
+.routine-cta .btn { min-width: 200px; flex: 1; }

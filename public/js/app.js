@@ -71,6 +71,78 @@ const tips = [
 ];
 
 // ===========================================================================
+// Lily — animated illustrated care agent + clinical scan visuals
+// ===========================================================================
+// A friendly, human-feeling nurse illustration (headset + stethoscope) with
+// idle blink / breathe / talk animation. Injected wherever [data-lily] appears.
+const LILY_SVG = `
+<svg class="lily-svg" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <path d="M16 122 Q20 88 44 82 L76 82 Q100 88 104 122 Z" fill="#ffffff"/>
+  <path d="M16 122 Q20 88 44 82 L76 82 Q100 88 104 122 Z" fill="none" stroke="#dfe8ec" stroke-width="1.4"/>
+  <path d="M50 82 L60 97 L70 82 Z" fill="#eaf1f4"/>
+  <path d="M50 84 C48 101 44 105 40 107" fill="none" stroke="#5b93b3" stroke-width="3" stroke-linecap="round"/>
+  <path d="M70 84 C72 101 76 105 80 107" fill="none" stroke="#5b93b3" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="80" cy="109" r="5" fill="#5b93b3"/><circle cx="80" cy="109" r="2.3" fill="#cfe0e8"/>
+  <rect x="53" y="70" width="14" height="16" rx="6" fill="#e6b389"/>
+  <g class="lily-head">
+    <circle cx="31" cy="55" r="5" fill="#f1c9a5"/><circle cx="89" cy="55" r="5" fill="#f1c9a5"/>
+    <circle cx="60" cy="52" r="30" fill="#f1c9a5"/>
+    <path d="M30 52 Q30 20 60 20 Q90 20 90 52 L90 40 Q86 26 60 26 Q34 26 34 40 Z" fill="#6f4a37"/>
+    <path d="M30 56 Q27 34 41 26 Q34 40 36 56 Z" fill="#6f4a37"/>
+    <path d="M90 56 Q93 34 79 26 Q86 40 84 56 Z" fill="#6f4a37"/>
+    <path d="M36 41 Q44 30 60 30 Q76 30 84 41 Q70 36 60 36 Q50 36 36 41 Z" fill="#5c3c2c"/>
+    <circle cx="46" cy="61" r="5" fill="#ef9a8a" opacity=".42"/><circle cx="74" cy="61" r="5" fill="#ef9a8a" opacity=".42"/>
+    <g class="lily-eyes">
+      <circle cx="50" cy="53" r="3.4" fill="#3b2b23"/><circle cx="70" cy="53" r="3.4" fill="#3b2b23"/>
+      <circle cx="51.2" cy="51.8" r="1" fill="#fff"/><circle cx="71.2" cy="51.8" r="1" fill="#fff"/>
+    </g>
+    <path d="M45 46 Q50 44 55 46" stroke="#5c3c2c" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+    <path d="M65 46 Q70 44 75 46" stroke="#5c3c2c" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+    <path d="M60 55 L58 61 Q60 62 62 61" stroke="#d9a880" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+    <path class="lily-mouth" d="M52 65 Q60 73 68 65" stroke="#b5573f" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+    <path d="M32 47 Q60 15 88 47" fill="none" stroke="#5b93b3" stroke-width="4" stroke-linecap="round"/>
+    <rect x="26" y="47" width="8" height="12" rx="3" fill="#5b93b3"/>
+    <path d="M30 59 Q25 71 43 71" fill="none" stroke="#5b93b3" stroke-width="2.6" stroke-linecap="round"/>
+    <circle class="lily-mic" cx="44" cy="71" r="2.7" fill="#e86f5c"/>
+  </g>
+</svg>`;
+
+// Wireframe face mesh used inside the scan ring.
+const FACE_MESH_SVG = `
+<svg class="fs-mesh" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <g stroke="#5b93b3" fill="none" stroke-width="1.1" opacity=".72" stroke-linecap="round">
+    <path d="M100 30 C62 30 50 66 53 100 C56 134 79 170 100 170 C121 170 144 134 147 100 C150 66 138 30 100 30 Z"/>
+    <path d="M100 32 L100 168"/>
+    <path d="M77 40 C70 90 74 142 86 164"/>
+    <path d="M123 40 C130 90 126 142 114 164"/>
+    <path d="M55 78 Q100 66 145 78"/>
+    <path d="M53 100 Q100 92 147 100"/>
+    <path d="M57 124 Q100 118 143 124"/>
+    <ellipse cx="78" cy="90" rx="10" ry="6"/><ellipse cx="122" cy="90" rx="10" ry="6"/>
+    <path d="M66 78 Q78 73 90 78"/><path d="M110 78 Q122 73 134 78"/>
+    <path d="M100 96 L100 116"/><path d="M92 118 Q100 122 108 118"/>
+    <path d="M84 136 Q100 145 116 136"/>
+  </g>
+</svg>`;
+
+// Inject the Lily illustration into every [data-lily] slot on the page.
+function injectLilyAvatars(root) {
+  (root || document).querySelectorAll('[data-lily]').forEach((el) => {
+    if (!el.dataset.lilyDone) { el.innerHTML = LILY_SVG; el.dataset.lilyDone = '1'; }
+  });
+}
+
+// Clinical face-scan loader markup (glowing ring + mesh + hexagon callouts).
+function scanFaceHTML(caption, opts = {}) {
+  const hexes = [['15%', '22%'], ['15%', '66%'], ['46%', '10%'], ['46%', '80%'], ['76%', '26%'], ['76%', '62%']];
+  const cells = hexes.map((h, i) => `<span class="fs-hex h${i + 1}" style="top:${h[0]};left:${h[1]};animation-delay:${(i * 0.28).toFixed(2)}s"></span>`).join('');
+  return `<div class="face-scan${opts.small ? ' sm' : ''}" role="img" aria-label="Analyzing your skin">
+    <div class="fs-ring"></div><div class="fs-ring fs-ring2"></div>
+    <div class="fs-core">${FACE_MESH_SVG}<div class="fs-sweep"></div>${cells}</div>
+  </div>${caption ? `<div class="fs-caption">${caption}</div>` : ''}${opts.substatus ? `<div class="fs-substatus" id="${opts.substatusId || ''}">${opts.substatus}</div>` : ''}`;
+}
+
+// ===========================================================================
 // Navigation
 // ===========================================================================
 let lastScrollTop = 0;
@@ -78,9 +150,57 @@ let lastScrollTop = 0;
 function enterShop() {
   document.getElementById('landing').style.display = 'none';
   document.getElementById('shopView').classList.add('active');
-  setTimeout(() => document.getElementById('aiAssistant').classList.add('active'), 800);
+  setTimeout(() => { document.getElementById('aiAssistant').classList.add('active'); startAssistantCoach(); }, 800);
+  maybeShowCoach();
 }
 function quickAnalyze() { enterShop(); setTimeout(openAnalyzer, 300); }
+
+// First-visit guided coach — Lily introduces herself and leads the user
+// through the flow (scan → review → shop routine).
+function maybeShowCoach() {
+  if (localStorage.getItem('dg_coached')) return;
+  const el = document.createElement('div');
+  el.className = 'coach-overlay';
+  el.id = 'coachOverlay';
+  el.onclick = (e) => { if (e.target === el) coachDismiss(); };
+  el.innerHTML = `<div class="coach-card">
+    <div class="coach-avatar" data-lily></div>
+    <div class="coach-title">${L('coach_hi', "Hi, I'm Lily 👋")}</div>
+    <div class="coach-text">${L('coach_intro', "I'm your skincare guide. Let's start with a 20-second skin scan — then I'll build a routine made just for you.")}</div>
+    <div class="coach-steps">
+      <span class="coach-step"><b>1</b> ${L('coach_s1', 'Scan')}</span>
+      <span class="coach-step"><b>2</b> ${L('coach_s2', 'Review')}</span>
+      <span class="coach-step"><b>3</b> ${L('coach_s3', 'Shop routine')}</span>
+    </div>
+    <button class="btn btn-primary btn-full" onclick="coachStart()">📸 ${L('coach_start', 'Scan my skin')}</button>
+    <button class="btn btn-secondary btn-full" onclick="coachDismiss()">${L('coach_skip', 'Explore the shop first')}</button>
+  </div>`;
+  document.body.appendChild(el);
+  injectLilyAvatars(el);
+}
+function coachDone() { localStorage.setItem('dg_coached', '1'); const el = document.getElementById('coachOverlay'); if (el) el.remove(); }
+function coachDismiss() { coachDone(); }
+function coachStart() { coachDone(); setTimeout(openAnalyzer, 250); }
+
+// Make the floating assistant feel alive: cycle short guiding prompts.
+let assistantCoachTimer = null;
+function startAssistantCoach() {
+  const bubble = document.getElementById('assistantBubble');
+  const textEl = bubble && bubble.querySelector('.assistant-bubble-text');
+  if (!textEl || assistantCoachTimer) return;
+  const tips = [
+    L('lead_1', "New here? Tap me and I'll scan your skin in 20 seconds. 📸"),
+    L('lead_2', 'I pick organic products for your exact concerns — with the reason for each. 🧴'),
+    L('lead_3', 'Ask me anything about your routine, ingredients or order. 💬'),
+  ];
+  let i = 0;
+  assistantCoachTimer = setInterval(() => {
+    if (!document.getElementById('aiAssistant').classList.contains('active')) return;
+    i = (i + 1) % tips.length;
+    textEl.style.opacity = '0';
+    setTimeout(() => { textEl.textContent = tips[i]; textEl.style.opacity = '1'; }, 250);
+  }, 5200);
+}
 function dismissAssistant() {
   const a = document.getElementById('aiAssistant');
   a.style.animation = 'assistantEntrance .5s ease-out reverse';
@@ -707,8 +827,7 @@ async function handleChatImage(event) {
   analyzing.className = 'message assistant';
   analyzing.id = 'analyzingMsg';
   analyzing.innerHTML = `<div class="message-label">Lily</div><div class="message-bubble">
-    <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem;"><span class="loading"></span> Analyzing your skin… ✨</div>
-    <div style="font-size:.85rem;color:var(--sage);" id="chatMlStatus">✅ Skin detected (${Math.round(pre.skinPercentage)}%) • 🤖 LLM Vision • 🧬 ML Cross-Validation…</div></div>`;
+    ${scanFaceHTML(L('analyzing_short', 'Analyzing your skin… ✨'), { small: true, substatus: `✅ ${L('skin_detected', 'Skin detected')} (${Math.round(pre.skinPercentage)}%) • 🤖 LLM Vision • 🧬 ML…`, substatusId: 'chatMlStatus' })}</div>`;
   container.appendChild(analyzing);
   container.scrollTop = container.scrollHeight;
 
@@ -784,6 +903,34 @@ function scoreRingHTML(metrics) {
     <span>${s}<small>${L('score_lbl', 'SCORE')}</small></span></div>`;
 }
 
+// "Your Glow Profile" eyebrow chip (matches the reference results panel).
+function profileEyebrowHTML() {
+  return `<span class="profile-eyebrow">${L('glow_profile', 'Your Glow Profile')}</span>`;
+}
+
+// One-tap "add the whole recommended routine to cart" bar.
+function routineCtaHTML(recs) {
+  if (!recs || !recs.length) return '';
+  const ids = recs.map((p) => p._id || p.id).filter(Boolean);
+  if (!ids.length) return '';
+  return `<div class="routine-cta">
+    <div><div class="routine-cta-title">${L('your_routine', 'Your recommended routine')}</div>
+      <div class="routine-cta-sub">${L('routine_steps', 'Cleanse → Treat → Moisturize → SPF')}</div></div>
+    <button class="btn btn-primary" onclick='addRoutineToCart(${JSON.stringify(ids)})'>🛒 ${L('add_routine', 'Add Full Routine to Cart')}</button>
+  </div>`;
+}
+
+// Add every recommended product to the cart in one tap.
+async function addRoutineToCart(ids) {
+  if (!State.token) { toast(L('signin_shop', 'Please sign in to shop 🌿')); openAuth(); return; }
+  let added = 0;
+  for (const id of ids || []) {
+    try { const cart = await api('/cart/items', { method: 'POST', body: { productId: id, quantity: 1 } }); State.cartCount = cart.count; added += 1; } catch (e) { /* skip */ }
+  }
+  updateCartCount();
+  toast(added ? `${L('routine_added', 'Routine added to cart')} 🛒 (${added})` : L('routine_fail', 'Could not add routine'));
+}
+
 // Prominent banner when the AI flags a condition needing a professional.
 function medicalBannerHTML(result) {
   if (!result.medicalFlag) return '';
@@ -838,7 +985,7 @@ function displayChatAnalysis(result, mlResults) {
     <div class="message-bubble">
       <div class="pro-analysis">
         <div class="analysis-header"><div class="analysis-head-row">
-          <div><h3>${L('pro_analysis', 'Professional Skin Analysis')}</h3>
+          <div>${profileEyebrowHTML()}<h3>${L('pro_analysis', 'Professional Skin Analysis')}</h3>
           <div class="analysis-subtitle">${localizedSubtitle(result)}</div></div>
           ${scoreRingHTML(metrics)}
         </div></div>
@@ -854,7 +1001,7 @@ function displayChatAnalysis(result, mlResults) {
       </div>
     </div>`;
   container.appendChild(div);
-  if (recommendedProducts?.length) container.appendChild(wrapMessage(recDetailHTML(L('recommended_for', 'Recommended for you'), recommendedProducts)));
+  if (recommendedProducts?.length) container.appendChild(wrapMessage(recDetailHTML(L('recommended_for', 'Recommended for you'), recommendedProducts) + routineCtaHTML(recommendedProducts)));
   container.scrollTop = container.scrollHeight;
   setTimeout(() => drawRadarChart(canvasId, metrics, localizeDefs(metricDefs), ml), 300);
 }
@@ -965,7 +1112,7 @@ async function handleImage(event) {
   const reader = new FileReader();
   reader.onload = async (e) => {
     const imgSrc = e.target.result;
-    content.innerHTML = `<img src="${imgSrc}" class="preview-img"><div class="scan-animation"><div class="scan-loader"></div><div>🔍 Checking for visible skin…</div></div>`;
+    content.innerHTML = `<img src="${imgSrc}" class="preview-img"><div class="scan-animation">${scanFaceHTML(L('checking_skin', 'Checking for visible skin…'))}</div>`;
 
     const pre = await preValidateSkinImage(file);
     if (!pre.valid) {
@@ -976,9 +1123,10 @@ async function handleImage(event) {
       return;
     }
 
-    content.innerHTML = `<img src="${imgSrc}" class="preview-img"><div class="scan-animation"><div class="scan-loader"></div>
-      <div style="display:flex;align-items:center;gap:.5rem;justify-content:center;"><span class="loading"></span> Analyzing your skin with AI…</div>
-      <div style="font-size:.85rem;color:var(--sage);margin-top:.5rem;" id="standaloneMlStatus">✅ Skin detected (${Math.round(pre.skinPercentage)}%) • 🤖 LLM Vision • 🧬 ML…</div></div>`;
+    content.innerHTML = `<img src="${imgSrc}" class="preview-img"><div class="scan-animation">${scanFaceHTML(
+      L('analyzing_ai', 'Analyzing your skin with AI…'),
+      { substatus: `✅ ${L('skin_detected', 'Skin detected')} (${Math.round(pre.skinPercentage)}%) • 🤖 LLM Vision • 🧬 ML…`, substatusId: 'standaloneMlStatus' },
+    )}</div>`;
 
     try {
       const { result, mlResults } = await runAnalysis(file, {
@@ -1013,7 +1161,7 @@ function displayStandaloneAnalysis(result, imgSrc, mlResults) {
     <img src="${imgSrc}" class="preview-img">
     <div class="pro-analysis">
       <div class="analysis-header"><div class="analysis-head-row">
-        <div><h3>${L('pro_analysis', 'Professional Skin Analysis')}</h3><div class="analysis-subtitle">${localizedSubtitle(result)}</div></div>
+        <div>${profileEyebrowHTML()}<h3>${L('pro_analysis', 'Professional Skin Analysis')}</h3><div class="analysis-subtitle">${localizedSubtitle(result)}</div></div>
         ${scoreRingHTML(metrics)}
       </div></div>
       ${medicalBannerHTML(result)}
@@ -1023,7 +1171,7 @@ function displayStandaloneAnalysis(result, imgSrc, mlResults) {
       <div class="analysis-summary"><div class="summary-title">${L('pro_rec', 'Professional Recommendation')}</div><div>${recommendation || '—'}</div></div>
       ${ml && ml.mlConcerns ? `<div class="ml-status-box"><div style="display:flex;align-items:center;gap:.5rem;font-size:.9rem;"><span>✅</span><span class="ml-status-title">${L('ml_active', 'ML Cross-Validation Active')}</span><span class="ml-confidence-badge">${Math.round((ml.confidence || 0) * 100)}% confidence</span></div></div>` : ''}
       ${feedbackSectionHTML(analysisId)}
-      ${recommendedProducts?.length ? recDetailHTML(L('recommended_for', 'Recommended for you'), recommendedProducts) : ''}
+      ${recommendedProducts?.length ? recDetailHTML(L('recommended_for', 'Recommended for you'), recommendedProducts) + routineCtaHTML(recommendedProducts) : ''}
       <div style="margin-top:1.5rem;display:flex;gap:1rem;flex-wrap:wrap;">
         <button class="btn btn-primary" style="flex:1;min-width:140px;" onclick="retakePhoto()">📸 ${L('new_analysis', 'New Analysis')}</button>
         <button class="btn btn-primary" style="flex:1;min-width:140px;" onclick="chatAboutAnalysis()">💬 ${L('chat_lily_btn', 'Chat with Lily')}</button>
@@ -1384,6 +1532,7 @@ window.onLangChange = function () {
 
 async function init() {
   if (window.i18n) window.i18n.apply();
+  injectLilyAvatars();
   renderLangSwitch('landingLang');
   renderLangSwitch('headerLang');
   updateAuthUI();
