@@ -546,17 +546,20 @@ h1, h2, h3, h4 { font-family: 'Playfair Display', Georgia, serif; letter-spacing
 /* =====================================================================
    Lily avatar images (real illustrated nurse from the promo)
    ===================================================================== */
-.lily-img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 18%; display: block; }
+/* Circular avatars: transparent head-shoulders cut-out, scaled — never warped */
+.lily-img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 14%; display: block; }
 .nurse-avatar, .assistant-avatar { overflow: hidden; }
 .assistant-face { width: 100%; height: 100%; display: block; }
 .chat-title .lily-badge { width: 34px; height: 34px; border-radius: 11px; overflow: hidden; display: inline-grid; place-items: center;
-    vertical-align: middle; margin-inline-end: .1rem; box-shadow: 0 6px 16px rgba(91,147,179,.3); }
-/* Hero: present Lily as a rounded portrait card (like the promo framing) */
-.nurse-card { position: relative; z-index: 2; width: min(300px, 78vw); aspect-ratio: 0.82; border-radius: 30px; overflow: hidden;
-    border: 6px solid var(--pearl); box-shadow: 0 26px 60px rgba(91,147,179,.32); background: linear-gradient(160deg, #dbe7f2, #eef4f9);
-    animation: float 6s ease-in-out infinite; }
-.nurse-card img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 8%; display: block; }
+    vertical-align: middle; margin-inline-end: .1rem; background: linear-gradient(160deg, #dbe7f2, #eef4f9); box-shadow: 0 6px 16px rgba(91,147,179,.3); }
 .coach-avatar img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 12%; display: block; }
+/* Hero: Lily as a clean cut-out figure (no frame), on a soft glow */
+.nurse-figure { position: relative; z-index: 2; width: min(330px, 82vw); aspect-ratio: 170 / 537; display: grid; place-items: end center;
+    animation: float 6s ease-in-out infinite; }
+.nurse-figure::before { content: ""; position: absolute; z-index: -1; left: 50%; top: 46%; transform: translate(-50%, -50%);
+    width: 108%; height: 82%; border-radius: 999px; filter: blur(4px);
+    background: radial-gradient(circle at 50% 42%, rgba(255,255,255,.9), transparent 44%), radial-gradient(circle at 50% 55%, rgba(143,185,201,.5), rgba(233,183,167,.34) 60%, transparent 72%); }
+.nurse-figure img { width: 100%; height: 100%; object-fit: contain; display: block; filter: drop-shadow(0 18px 30px rgba(91,147,179,.28)); }
 
 /* =====================================================================
    Clinical face-scan processing animation (real scan-device art)
