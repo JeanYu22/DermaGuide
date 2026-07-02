@@ -331,6 +331,7 @@ function renderHomeProducts() {
   el.innerHTML = picks.length ? picks.map((p) => `
     <div class="home-product-card" onclick='showProductModal(${JSON.stringify(p).replace(/'/g, "&#39;")})'>
       <div class="home-product-img">${productImageInner(p)}</div>
+      <div class="home-product-brand">${p.brand || 'DermaGuide'}</div>
       <div class="home-product-name">${p.name}</div>
       <div class="home-product-price">$${p.price.toFixed(2)}</div>
       <button class="btn btn-dark btn-small btn-full" onclick="event.stopPropagation(); addToCart('${p.id}', this)">${L('add_cart', 'Add to Cart')}</button>
@@ -364,11 +365,22 @@ function renderSkinHealth() {
   }
   const defs = localizeDefs(cached.defs).slice(0, 3);
   el.innerHTML = `<div class="health-bars">${defs.map(({ key, label }) => {
-    const pct = Math.round(((cached.metrics[key] || 0) / 10) * 100);
-    return `<div class="health-row"><span class="health-label">${label}</span>
-      <div class="bar"><span style="width:${pct}%"></span></div><span class="health-pct">${pct}%</span></div>`;
+    // Home shows a positive "health" %: invert the concern score (higher = healthier).
+    const pct = Math.max(5, Math.min(99, Math.round(100 - (cached.metrics[key] || 0) * 9)));
+    return `<div class="health-item">
+      <div class="health-top"><span class="health-icon">${healthIcon(key)}</span><span class="health-label">${label}</span><span class="health-pct">${pct}%</span></div>
+      <div class="bar"><span style="width:${pct}%"></span></div></div>`;
   }).join('')}
   <div class="health-note">${L('based_on_last', 'Based on your last analysis.')}</div></div>`;
+}
+function healthIcon(key) {
+  const k = (key || '').toLowerCase();
+  if (k.includes('hydr') || k.includes('moist') || k.includes('dehydr')) return '💧';
+  if (k.includes('clar') || k.includes('radi') || k.includes('tone') || k.includes('pigment')) return '✨';
+  if (k.includes('text') || k.includes('pore')) return '🧴';
+  if (k.includes('oil') || k.includes('sebum')) return '🫧';
+  if (k.includes('acne') || k.includes('red') || k.includes('sensit')) return '🌿';
+  return '🌿';
 }
 
 function renderTips() {
@@ -1073,10 +1085,10 @@ function recDetailHTML(title, recs) {
       ${recs.map((p, i) => `<div class="rec-vcard" onclick='showProductModal(${JSON.stringify(p).replace(/'/g, "&#39;")})'>
         <div class="rec-vcard-img">${p.images && p.images.length
           ? `<img src="${p.images[0]}" loading="lazy" onerror="${imgFallback(p.emoji, 'product-emoji')}">`
-          : `<span class="product-emoji">${p.emoji || '🧴'}</span>`}
-          <span class="match-badge">${matchScoreFor(i)}% ${L('match', 'Match')}</span></div>
+          : `<span class="product-emoji">${p.emoji || '🧴'}</span>`}</div>
         <div class="rec-vcard-body">
           <div class="rec-name">${p.name}</div>
+          <div class="rec-match"><span class="rec-match-label">${L('match_score', 'Match Score')}</span><span class="rec-match-score">${matchScoreFor(i)}% ${L('match', 'Match')}</span></div>
           <div class="rec-price">$${p.price.toFixed(2)}</div>
           ${p.reason ? `<div class="rec-reason">💡 <strong>${L('rec_why', 'Why')}:</strong> ${p.reason}</div>` : ''}
           ${p.howToUse ? `<div class="rec-howto">📋 <strong>${L('rec_how', 'How to use')}:</strong> ${p.howToUse}</div>` : ''}
@@ -1106,6 +1118,7 @@ function displayChatAnalysis(result, mlResults) {
           ${scoreRingHTML(metrics)}
         </div></div>
         ${medicalBannerHTML(result)}
+        <h4 class="radar-heading">${L('radar_title', 'Skin Health Radar Chart')}</h4>
         <div class="radar-container"><canvas id="${canvasId}" width="400" height="400"></canvas></div>
         <div class="metrics-grid" id="grid-${analysisId}">${metricsGridHTML(metrics, metricDefs)}</div>
         <div class="analysis-summary"><div class="summary-title">${L('top_concerns', 'Top Concerns')}</div><div>${localizedTopConcerns(metrics, metricDefs) || topConcerns}</div></div>
@@ -1117,7 +1130,7 @@ function displayChatAnalysis(result, mlResults) {
       </div>
     </div>`;
   container.appendChild(div);
-  if (recommendedProducts?.length) container.appendChild(wrapMessage(recDetailHTML(L('recommended_for', 'Recommended for you'), recommendedProducts) + routineCtaHTML(recommendedProducts)));
+  if (recommendedProducts?.length) container.appendChild(wrapMessage(recDetailHTML(L('tailored_recs', 'Tailored Product Recommendations'), recommendedProducts) + routineCtaHTML(recommendedProducts)));
   container.scrollTop = container.scrollHeight;
   setTimeout(() => drawRadarChart(canvasId, metrics, localizeDefs(metricDefs), ml), 300);
 }
@@ -1293,13 +1306,14 @@ function displayStandaloneAnalysis(result, imgSrc, mlResults) {
           <p class="result-summary">${recommendation || ''}</p></div>
       </div>
       ${medicalBannerHTML(result)}
+      <h4 class="radar-heading">${L('radar_title', 'Skin Health Radar Chart')}</h4>
       <div class="result-charts">
         <div class="radar-container"><canvas id="${canvasId}" width="400" height="400"></canvas></div>
         <div class="metric-list" id="grid-${analysisId}">${metricDetailHTML(metrics, metricDefs, analysisId)}</div>
       </div>
       ${ml && ml.mlConcerns ? `<div class="ml-status-box"><div style="display:flex;align-items:center;gap:.5rem;font-size:.9rem;"><span>✅</span><span class="ml-status-title">${L('ml_active', 'ML Cross-Validation Active')}</span><span class="ml-confidence-badge">${Math.round((ml.confidence || 0) * 100)}% confidence</span></div></div>` : ''}
       ${reviewerNoteHTML(result)}
-      ${recommendedProducts?.length ? routineCtaHTML(recommendedProducts) + recDetailHTML(L('recommended_for', 'Recommended for you'), recommendedProducts) : ''}
+      ${recommendedProducts?.length ? routineCtaHTML(recommendedProducts) + recDetailHTML(L('tailored_recs', 'Tailored Product Recommendations'), recommendedProducts) : ''}
       ${feedbackSectionHTML(analysisId)}
       <div style="margin-top:1.2rem;display:flex;gap:.8rem;flex-wrap:wrap;">
         <button class="btn btn-secondary" style="flex:1;min-width:130px;" onclick="retakePhoto()">📸 ${L('new_analysis', 'New Analysis')}</button>

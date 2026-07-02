@@ -234,16 +234,20 @@ h1, h2, h3, h4 { font-family: 'Playfair Display', Georgia, serif; letter-spacing
 
 /* Lily greeting card — leads with an action, like the reference home screen */
 .lily-card {
-    display: flex; align-items: center; gap: 1rem; margin: 1.2rem 1.5rem 0; padding: 1.2rem;
-    max-width: 1120px; margin-left: auto; margin-right: auto;
-    background: linear-gradient(135deg, rgba(217,169,60,.14), rgba(139,191,160,.12)), rgba(255,255,255,.8);
+    position: relative; display: flex; flex-direction: column; align-items: center; text-align: center; gap: .85rem;
+    margin: 3.6rem auto 0; padding: 3.2rem 1.5rem 1.5rem; max-width: 560px;
+    background: linear-gradient(135deg, rgba(217,169,60,.14), rgba(139,191,160,.12)), rgba(255,255,255,.85);
     backdrop-filter: blur(14px); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow-soft);
-    flex-wrap: wrap;
 }
-.lily-card-avatar { width: 64px; height: 64px; border-radius: 50%; overflow: hidden; flex: 0 0 auto; border: 3px solid var(--pearl); box-shadow: 0 8px 20px rgba(169,120,31,.24); }
-.lily-card-body { flex: 1 1 220px; min-width: 200px; }
-.lily-card-text { color: var(--cocoa-soft); font-size: .95rem; line-height: 1.5; margin-bottom: .7rem; }
-.lily-card-body .btn { min-width: 220px; }
+.lily-card-avatar {
+    position: absolute; top: -46px; left: 50%; transform: translateX(-50%);
+    width: 92px; height: 92px; border-radius: 50%; overflow: hidden;
+    border: 4px solid var(--pearl); box-shadow: 0 12px 26px rgba(169,120,31,.28);
+    background: radial-gradient(circle at 50% 30%, #fff, var(--soft-clay));
+}
+.lily-card-body { width: 100%; }
+.lily-card-text { color: var(--cocoa-soft); font-size: 1rem; line-height: 1.55; margin-bottom: 1rem; font-weight: 600; }
+.lily-card-body .btn { width: 100%; max-width: 340px; }
 
 /* Home product strip ("Top Picks for You") */
 .home-products { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: .9rem; padding: 0 1.5rem; max-width: 1120px; margin: 0 auto; }
@@ -254,17 +258,22 @@ h1, h2, h3, h4 { font-family: 'Playfair Display', Georgia, serif; letter-spacing
 .home-product-card:hover { transform: translateY(-3px); }
 .home-product-img { aspect-ratio: 1/1; border-radius: 12px; overflow: hidden; background: rgba(255,255,255,.7); display: grid; place-items: center; margin-bottom: .55rem; font-size: 2.2rem; }
 .home-product-img img { width: 100%; height: 100%; object-fit: cover; }
+.home-product-brand { font-size: .66rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--sage-dark); margin-bottom: .1rem; }
 .home-product-name { font-size: .86rem; font-weight: 700; color: var(--deep-cocoa); margin-bottom: .15rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .home-product-price { font-size: .92rem; font-weight: 800; color: var(--gold-dark); margin-bottom: .55rem; }
 
 /* Recent Skin Health summary card */
 .skin-health-card { max-width: 1120px; margin: 0 auto; padding: 0 1.5rem; }
-.health-bars { background: rgba(255,255,255,.8); border: 1px solid var(--line); border-radius: var(--radius-md); padding: 1.1rem; box-shadow: var(--shadow-soft); }
-.health-row { display: grid; grid-template-columns: 110px 1fr 44px; align-items: center; gap: .7rem; margin-bottom: .7rem; font-size: .88rem; color: var(--cocoa-soft); font-weight: 700; }
-.health-row .bar { height: 8px; border-radius: 999px; background: rgba(58,47,31,.09); overflow: hidden; }
-.health-row .bar span { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--rose-gold), var(--gold-dark)); }
-.health-pct { text-align: right; color: var(--gold-dark); }
-.health-note { font-size: .78rem; color: var(--muted); margin-top: .3rem; }
+.health-bars { background: rgba(255,255,255,.8); border: 1px solid var(--line); border-radius: var(--radius-md); padding: 1.2rem 1.3rem; box-shadow: var(--shadow-soft); }
+.health-item { margin-bottom: 1rem; }
+.health-item:last-of-type { margin-bottom: .3rem; }
+.health-top { display: flex; align-items: center; gap: .55rem; margin-bottom: .45rem; }
+.health-icon { width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center; font-size: .95rem; background: linear-gradient(135deg, rgba(217,169,60,.35), rgba(201,160,160,.3)); flex: 0 0 auto; }
+.health-label { flex: 1; font-size: .9rem; font-weight: 700; color: var(--deep-cocoa); }
+.health-pct { font-size: .9rem; font-weight: 800; color: var(--gold-dark); }
+.health-item .bar { height: 9px; border-radius: 999px; background: rgba(58,47,31,.09); overflow: hidden; }
+.health-item .bar span { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--rose-gold), var(--gold-dark)); transition: width .5s ease; }
+.health-note { font-size: .78rem; color: var(--muted); margin-top: .5rem; }
 .skin-health-empty { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;
     background: rgba(255,255,255,.7); border: 1px dashed var(--line); border-radius: var(--radius-md); padding: 1rem 1.1rem; color: var(--cocoa-soft); font-size: .9rem; }
 
@@ -375,6 +384,12 @@ h1, h2, h3, h4 { font-family: 'Playfair Display', Georgia, serif; letter-spacing
 .rec-vcard-img { position: relative; width: 100%; aspect-ratio: 1/1; background: linear-gradient(135deg, rgba(217, 169, 60,.35), rgba(139, 191, 160,.32)); display: flex; align-items: center; justify-content: center; overflow: hidden; }
 .rec-vcard-img img { width: 100%; height: 100%; object-fit: cover; }
 .match-badge { position: absolute; top: .5rem; left: .5rem; background: rgba(58,47,31,.78); color: #fff8f3; font-size: .68rem; font-weight: 800; padding: .28rem .55rem; border-radius: 999px; }
+/* Match Score in the recommendation card body (like the reference) */
+.rec-match { margin: .1rem 0 .35rem; }
+.rec-match-label { display: block; font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.rec-match-score { display: block; font-size: 1.15rem; font-weight: 900; color: var(--gold-dark); line-height: 1.1; }
+/* Centered section heading above the radar chart */
+.radar-heading { text-align: center; font-family: 'Playfair Display', Georgia, serif; font-size: 1.25rem; color: var(--deep-cocoa); margin: .2rem 0 1rem; }
 .rec-vcard-body { padding: .75rem .85rem .95rem; }
 .rec-vcard-body .rec-name { font-size: .93rem; }
 .rec-vcard-body .rec-price { margin-bottom: .5rem; }
