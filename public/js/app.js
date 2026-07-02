@@ -1297,6 +1297,8 @@ function displayStandaloneAnalysis(result, imgSrc, mlResults) {
   const canvasId = 'canvas-' + analysisId;
   analysisStore[analysisId] = { metrics, skinType, mlResults: ml, canvasId, metricDefs, view: 'standalone' };
   cacheSkinHealth(result);
+  // Collapse the upload chrome so only the scanned photo sits above the results.
+  document.getElementById('analyzeLeft')?.classList.add('done');
   const headline = localizedTopConcerns(metrics, metricDefs) || topConcerns || L('pro_analysis', 'Skin snapshot');
   setAnalyzerRight(`
     <div class="pro-analysis">
