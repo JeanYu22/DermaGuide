@@ -737,6 +737,23 @@ async function submitCheckout(btn) {
 // ===========================================================================
 // Chat (streaming SSE)
 // ===========================================================================
+// Chat row markup: Lily avatar + labelled bubble (assistant) / plain bubble (user).
+function chatRowHTML(role, bodyHTML, bubbleAttrs = '') {
+  const label = role === 'assistant' ? 'Lily' : 'You';
+  const avatar = role === 'assistant' ? `<div class="message-avatar">${LILY_IMG}</div>` : '';
+  return `${avatar}<div class="message-col"><div class="message-label">${label}</div><div class="message-bubble"${bubbleAttrs ? ' ' + bubbleAttrs : ''}>${bodyHTML}</div></div>`;
+}
+// Chat image-analysis preview: the photo with an "Analyzing…" overlay + progress bar.
+function chatAnalyzeCardHTML(thumbUrl, caption, substatus, substatusId) {
+  return `<div class="chat-analyze-card">
+    <img src="${thumbUrl}" alt="">
+    <div class="chat-analyze-overlay">
+      <div class="chat-analyze-label">${caption}</div>
+      <div class="chat-progress"><span></span></div>
+      ${substatus ? `<div class="chat-analyze-sub" id="${substatusId || ''}">${substatus}</div>` : ''}
+    </div>
+  </div>`;
+}
 function addMessage(role, content) {
   const container = document.getElementById('chatMessages');
   const prev = document.getElementById('lastMsg');
@@ -744,7 +761,7 @@ function addMessage(role, content) {
   const div = document.createElement('div');
   div.className = `message ${role}`;
   if (role === 'assistant') div.id = 'lastMsg';
-  div.innerHTML = `<div class="message-label">${role === 'assistant' ? 'Lily' : 'You'}</div><div class="message-bubble">${content}</div>`;
+  div.innerHTML = chatRowHTML(role, content);
   container.appendChild(div);
   container.scrollTop = container.scrollHeight;
   return div;
@@ -832,6 +849,12 @@ function showRecommendations(recs) {
 
 function triggerChatImageUpload() { document.getElementById('chatImageInput').click(); }
 
+// Quick-action chip above the chat input: fills the box and sends.
+function chatQuickPrompt(text) {
+  const input = document.getElementById('chatInput');
+  if (input) { input.value = text; sendMessage(); }
+}
+
 // ===========================================================================
 // Skin analysis (chat + standalone) — backend agents + client ML overlay
 // ===========================================================================
@@ -873,9 +896,9 @@ async function handleChatImage(event) {
   const userMsg = document.createElement('div');
   userMsg.className = 'message user';
   const thumbUrl = URL.createObjectURL(file);
-  userMsg.innerHTML = `<div class="message-label">You</div><div class="message-bubble">
+  userMsg.innerHTML = chatRowHTML('user', `
     <img src="${thumbUrl}" alt="uploaded photo" style="display:block;max-width:170px;width:100%;border-radius:12px;margin-bottom:.5rem;">
-    📸 Uploaded a photo for skin analysis</div>`;
+    📸 ${L('uploaded_photo', 'Uploaded a photo for skin analysis')}`);
   container.appendChild(userMsg);
 
   // Pre-validate skin presence in-browser before hitting the model.
@@ -883,10 +906,10 @@ async function handleChatImage(event) {
   if (!pre.valid) {
     const err = document.createElement('div');
     err.className = 'message assistant';
-    err.innerHTML = `<div class="message-label">Lily</div><div class="message-bubble" style="background:linear-gradient(135deg,#fff3e0,#ffe0b2);border-left:4px solid #ff9800;">
+    err.innerHTML = chatRowHTML('assistant', `
       <div style="font-size:1.2rem;margin-bottom:.5rem;">🙈 I can't see any skin in this photo!</div>
-      <p style="margin:0;color:#5d4037;">${pre.message}</p>
-      <button class="btn btn-primary btn-full" style="margin-top:1rem;" onclick="triggerChatImageUpload()">📸 Upload a Different Photo</button></div>`;
+      <p style="margin:0;">${pre.message}</p>
+      <button class="btn btn-primary btn-full" style="margin-top:1rem;" onclick="triggerChatImageUpload()">📸 Upload a Different Photo</button>`);
     container.appendChild(err);
     container.scrollTop = container.scrollHeight;
     return;
@@ -895,8 +918,12 @@ async function handleChatImage(event) {
   const analyzing = document.createElement('div');
   analyzing.className = 'message assistant';
   analyzing.id = 'analyzingMsg';
-  analyzing.innerHTML = `<div class="message-label">Lily</div><div class="message-bubble">
-    ${scanFaceHTML(L('analyzing_short', 'Analyzing your skin… ✨'), { small: true, substatus: `✅ ${L('skin_detected', 'Skin detected')} (${Math.round(pre.skinPercentage)}%) • 🤖 LLM Vision • 🧬 ML…`, substatusId: 'chatMlStatus' })}</div>`;
+  analyzing.innerHTML = chatRowHTML('assistant', chatAnalyzeCardHTML(
+    thumbUrl,
+    L('analyzing_short', 'Analyzing…'),
+    `✅ ${L('skin_detected', 'Skin detected')} (${Math.round(pre.skinPercentage)}%) • 🤖 LLM • 🧬 ML`,
+    'chatMlStatus',
+  ));
   container.appendChild(analyzing);
   container.scrollTop = container.scrollHeight;
 
@@ -1108,9 +1135,7 @@ function displayChatAnalysis(result, mlResults) {
   const container = document.getElementById('chatMessages');
   const div = document.createElement('div');
   div.className = 'message assistant';
-  div.innerHTML = `
-    <div class="message-label">Lily</div>
-    <div class="message-bubble">
+  div.innerHTML = chatRowHTML('assistant', `
       <div class="pro-analysis">
         <div class="analysis-header"><div class="analysis-head-row">
           <div>${profileEyebrowHTML()}<h3>${L('pro_analysis', 'Professional Skin Analysis')}</h3>
@@ -1127,8 +1152,7 @@ function displayChatAnalysis(result, mlResults) {
           <span>✅</span><span class="ml-status-title">${L('ml_active', 'ML Cross-Validation Active')}</span>
           <span class="ml-confidence-badge">${Math.round((ml.confidence || 0) * 100)}% confidence</span></div></div>` : ''}
         ${feedbackSectionHTML(analysisId)}
-      </div>
-    </div>`;
+      </div>`);
   container.appendChild(div);
   if (recommendedProducts?.length) container.appendChild(wrapMessage(recDetailHTML(L('tailored_recs', 'Tailored Product Recommendations'), recommendedProducts) + routineCtaHTML(recommendedProducts)));
   container.scrollTop = container.scrollHeight;
@@ -1138,7 +1162,7 @@ function displayChatAnalysis(result, mlResults) {
 function wrapMessage(innerHTML) {
   const d = document.createElement('div');
   d.className = 'message assistant';
-  d.innerHTML = innerHTML;
+  d.innerHTML = chatRowHTML('assistant', innerHTML);
   return d;
 }
 function cap(s) { return (s || '').charAt(0).toUpperCase() + (s || '').slice(1); }

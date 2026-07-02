@@ -140,18 +140,26 @@
         </div>
         <div class="chat-messages" id="chatMessages">
             <div class="message assistant">
-                <div class="message-label">Lily</div>
-                <div class="message-bubble">
-                    👋 Welcome! I'm Lily, your personal skincare expert specializing in organic &amp; vegan products.
-                    <br><br>Tell me about:<br>• Your skin concerns<br>• Your skin type<br>• What you're looking for
+                <div class="message-avatar" data-lily></div>
+                <div class="message-col">
+                    <div class="message-label">Lily</div>
+                    <div class="message-bubble">
+                        👋 Welcome! I'm Lily, your personal skincare expert specializing in organic &amp; vegan products.
+                        <br><br>Tell me about:<br>• Your skin concerns<br>• Your skin type<br>• What you're looking for
+                    </div>
                 </div>
             </div>
         </div>
         <div class="chat-input-area">
+            <div class="chat-prompt-chips" id="chatPromptChips">
+                <button class="chip" onclick="chatQuickPrompt('Recommend a cleanser')" data-i18n="chip_cleanser">Recommend a cleanser</button>
+                <button class="chip" onclick="chatQuickPrompt('Check my skin report')" data-i18n="chip_report">Check my skin report</button>
+                <button class="chip" onclick="triggerChatImageUpload()" data-i18n="chip_upload">📷 Upload photo</button>
+            </div>
             <div class="chat-input-row">
                 <input type="text" class="chat-input" id="chatInput" placeholder="Type your message..." data-i18n-ph="chat_ph">
-                <button class="chat-action-btn analyze-btn" onclick="triggerChatImageUpload()" title="Analyze skin photo">📸</button>
                 <button class="chat-action-btn send-btn" id="sendBtn" onclick="sendMessage()">➤</button>
+                <button class="chat-action-btn analyze-btn" onclick="triggerChatImageUpload()" title="Analyze skin photo">📷</button>
             </div>
             <input type="file" id="chatImageInput" accept="image/*" capture="user" style="display:none;" onchange="handleChatImage(event)">
         </div>

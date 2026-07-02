@@ -353,7 +353,7 @@ function drawRadarChart(canvasId, metrics, metricDefs, mlResults = null) {
     ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.setLineDash([]);
   }
 
-  ctx.beginPath(); ctx.fillStyle = 'rgba(201,160,160,0.32)'; ctx.strokeStyle = '#a97e7e'; ctx.lineWidth = 2.5;
+  ctx.beginPath(); ctx.fillStyle = 'rgba(230,185,138,0.38)'; ctx.strokeStyle = '#B88A2A'; ctx.lineWidth = 2.5;
   for (let i = 0; i < n; i++) {
     const ang = (Math.PI * 2 / n) * i - Math.PI / 2; const rad = maxR * (llm[i] / 10);
     const x = cx + Math.cos(ang) * rad, y = cy + Math.sin(ang) * rad;
@@ -361,7 +361,7 @@ function drawRadarChart(canvasId, metrics, metricDefs, mlResults = null) {
   }
   ctx.closePath(); ctx.fill(); ctx.stroke();
 
-  ctx.fillStyle = '#a9781f';
+  ctx.fillStyle = '#B88A2A';
   for (let i = 0; i < n; i++) {
     const ang = (Math.PI * 2 / n) * i - Math.PI / 2; const rad = maxR * (llm[i] / 10);
     ctx.beginPath(); ctx.arc(cx + Math.cos(ang) * rad, cy + Math.sin(ang) * rad, 4, 0, Math.PI * 2); ctx.fill();
@@ -373,21 +373,21 @@ function drawRadarChart(canvasId, metrics, metricDefs, mlResults = null) {
     if (score != null) {
       ctx.beginPath(); ctx.arc(cx, cy, 34, 0, Math.PI * 2);
       ctx.fillStyle = dark ? 'rgba(29,23,19,.92)' : 'rgba(255,253,248,.94)';
-      ctx.fill(); ctx.lineWidth = 1.5; ctx.strokeStyle = '#a97e7e'; ctx.stroke();
-      ctx.fillStyle = dark ? '#f4e9e2' : '#3a2f1f';
+      ctx.fill(); ctx.lineWidth = 1.5; ctx.strokeStyle = '#B88A2A'; ctx.stroke();
+      ctx.fillStyle = dark ? '#f4e9e2' : '#141414';
       ctx.font = '700 20px Georgia, serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillText(String(score), cx, cy - 4);
-      ctx.font = '700 9px Inter'; ctx.fillStyle = dark ? '#cbb6ac' : '#93826a';
+      ctx.font = '700 9px Inter'; ctx.fillStyle = dark ? '#cbb6ac' : '#6F6A60';
       ctx.fillText('OVERALL', cx, cy + 13);
     }
   }
 
   if (ml) {
     const ly = 392; ctx.font = '10px Inter';
-    const tc = dark ? '#cbb6ac' : '#62504b';
-    ctx.fillStyle = '#a97e7e'; ctx.fillRect(70, ly, 20, 3);
+    const tc = dark ? '#cbb6ac' : '#6F6A60';
+    ctx.fillStyle = '#B88A2A'; ctx.fillRect(70, ly, 20, 3);
     ctx.fillStyle = tc; ctx.textAlign = 'left'; ctx.fillText('LLM Analysis', 95, ly + 3);
-    ctx.strokeStyle = '#6c7a42'; ctx.lineWidth = 2; ctx.setLineDash([3, 3]);
+    ctx.strokeStyle = '#6F783C'; ctx.lineWidth = 2; ctx.setLineDash([3, 3]);
     ctx.beginPath(); ctx.moveTo(200, ly + 1.5); ctx.lineTo(220, ly + 1.5); ctx.stroke(); ctx.setLineDash([]);
     ctx.fillStyle = tc; ctx.fillText('ML Cross-Validation', 225, ly + 3);
   }
