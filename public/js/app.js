@@ -73,9 +73,31 @@ const tips = [
 // ===========================================================================
 // Lily — animated illustrated care agent + clinical scan visuals
 // ===========================================================================
-// Lily is presented with the real illustrated nurse (from the source promo):
-// a friendly dermatologist portrait. Circular slots use a face crop.
-const LILY_IMG = '<img class="lily-img" src="/img/lily-face.png" alt="Lily, your skincare guide" loading="lazy">';
+// Lily — the teal AI-consultant avatar (per the Stitch design): a friendly
+// robot face on a teal gradient disc. One constant feeds every avatar slot.
+const LILY_IMG = `
+<svg class="lily-ai" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" aria-label="Lily, your AI skincare consultant">
+  <defs>
+    <radialGradient id="lilyBg" cx="38%" cy="30%" r="80%">
+      <stop offset="0%" stop-color="#BFE8DF"/><stop offset="55%" stop-color="#5FB3A1"/><stop offset="100%" stop-color="#177363"/>
+    </radialGradient>
+  </defs>
+  <circle cx="60" cy="60" r="60" fill="url(#lilyBg)"/>
+  <circle cx="60" cy="60" r="60" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="2"/>
+  <line x1="60" y1="18" x2="60" y2="28" stroke="#FFFDF8" stroke-width="3.4" stroke-linecap="round"/>
+  <circle cx="60" cy="14.5" r="4.2" fill="#E7C86A"/>
+  <rect x="20" y="52" width="8" height="20" rx="4" fill="#FFFDF8" opacity=".92"/>
+  <rect x="92" y="52" width="8" height="20" rx="4" fill="#FFFDF8" opacity=".92"/>
+  <rect x="28" y="32" width="64" height="58" rx="26" fill="#FFFDF8"/>
+  <rect x="36" y="44" width="48" height="34" rx="17" fill="#E9F5F2"/>
+  <g class="lily-eyes">
+    <rect x="45" y="52" width="7.5" height="15" rx="3.75" fill="#177363"/>
+    <rect x="67.5" y="52" width="7.5" height="15" rx="3.75" fill="#177363"/>
+  </g>
+  <path d="M52 82 Q60 88 68 82" stroke="#177363" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <circle cx="39" cy="70" r="3" fill="#B7E0D8"/><circle cx="81" cy="70" r="3" fill="#B7E0D8"/>
+  <path d="M92 26 L94.5 32 L100.5 34.5 L94.5 37 L92 43 L89.5 37 L83.5 34.5 L89.5 32 Z" fill="#E7C86A"/>
+</svg>`;
 
 // Inject the Lily face into every [data-lily] slot on the page.
 function injectLilyAvatars(root) {
@@ -102,6 +124,7 @@ function enterShop() {
   document.getElementById('shopView').classList.add('active');
   setTimeout(() => { document.getElementById('aiAssistant').classList.add('active'); startAssistantCoach(); }, 800);
   maybeShowCoach();
+  typeLilyGreeting();
 }
 function quickAnalyze() { enterShop(); setTimeout(openAnalyzer, 300); }
 
@@ -220,6 +243,25 @@ function scrollToProducts() { document.getElementById('productsSection').scrollI
 function scrollToTips() { document.getElementById('tipsSection').scrollIntoView({ behavior: 'smooth' }); }
 function scrollToHome() { const c = document.getElementById('lilyCard'); if (c) c.scrollIntoView({ behavior: 'smooth' }); }
 function openProfile() { openAuth(); }
+function setNavActive(el) {
+  document.querySelectorAll('.bottom-nav .nav-item').forEach((n) => n.classList.remove('active'));
+  if (el) el.classList.add('active');
+}
+
+// Typewriter effect on Lily's home greeting (Stitch hero card).
+let lilyTypeTimer = null;
+function typeLilyGreeting() {
+  const el = document.getElementById('lilyType');
+  if (!el) return;
+  const text = L('lily_greeting', "Hi, I'm Lily, your AI Skincare Consultant. Let's check your skin before perfecting your glow.");
+  clearInterval(lilyTypeTimer);
+  el.textContent = '';
+  let i = 0;
+  lilyTypeTimer = setInterval(() => {
+    el.textContent = text.slice(0, ++i);
+    if (i >= text.length) clearInterval(lilyTypeTimer);
+  }, 26);
+}
 
 // ===========================================================================
 // Products + tips rendering
@@ -305,8 +347,11 @@ function renderProducts() {
         </div>
         <div class="product-info">
           <div class="product-name">${p.name}</div>
-          <div class="product-desc">${p.desc}</div>
-          <div class="product-price">$${p.price.toFixed(2)}${p.inStock ? '' : '<span class="out-of-stock">Out of stock</span>'}</div>
+          ${p.brand ? `<div class="product-brand">${p.brand}</div>` : ''}
+          <div class="product-buy">
+            <span class="product-price">$${p.price.toFixed(2)}${p.inStock ? '' : '<span class="out-of-stock">Out of stock</span>'}</span>
+            ${p.inStock ? `<button class="add-btn" onclick="event.stopPropagation(); addToCart('${p.id}', this)">${L('add', 'Add')}</button>` : ''}
+          </div>
         </div>`;
       container.appendChild(card);
     });
@@ -323,17 +368,25 @@ function renderProducts() {
   if (shop.page === 1) renderHomeProducts();
 }
 
-// Compact "Top Picks" strip on the home/shop surface (real catalogue items).
+// "Recommended for You" strip on home. Prefers the user's REAL cached
+// recommendations (from their last analysis, rank = match strength) and
+// shows match badges only for those; otherwise falls back to top picks.
 function renderHomeProducts() {
   const el = document.getElementById('homeProducts');
   if (!el) return;
-  const picks = State.products.slice(0, 4);
-  el.innerHTML = picks.length ? picks.map((p) => `
+  let cached = null;
+  try { cached = JSON.parse(localStorage.getItem('dg_last_health') || 'null'); } catch (e) { /* ignore */ }
+  const recs = cached && cached.recs && cached.recs.length ? cached.recs : null;
+  const picks = recs || State.products.slice(0, 4);
+  el.innerHTML = picks.length ? picks.map((p, i) => `
     <div class="home-product-card" onclick='showProductModal(${JSON.stringify(p).replace(/'/g, "&#39;")})'>
       <div class="home-product-img">${productImageInner(p)}</div>
       <div class="home-product-brand">${p.brand || 'DermaGuide'}</div>
       <div class="home-product-name">${p.name}</div>
-      <div class="home-product-price">$${p.price.toFixed(2)}</div>
+      <div class="home-product-buy">
+        <span class="home-product-price">$${Number(p.price).toFixed(2)}</span>
+        ${recs ? `<span class="match-ring" title="${L('match_score', 'Match Score')}"><b>${matchScoreFor(i)}%</b><small>${L('match', 'Match')}</small><em>✓</em></span>` : ''}
+      </div>
       <button class="btn btn-dark btn-small btn-full" onclick="event.stopPropagation(); addToCart('${p.id}', this)">${L('add_cart', 'Add to Cart')}</button>
     </div>`).join('') : `<div class="empty-grid" style="padding:1.2rem;">${L('loading_products', 'Loading products…')}</div>`;
 }
@@ -346,9 +399,16 @@ function cacheSkinHealth(result) {
     const defs = (result.metricDefs && result.metricDefs.length)
       ? result.metricDefs
       : Object.keys(metrics).map((k) => ({ key: k, label: k }));
-    localStorage.setItem('dg_last_health', JSON.stringify({ metrics, defs, at: Date.now() }));
+    // Also cache the real recommended products so home's "Recommended for
+    // You" carries genuine match badges (rank order = match strength).
+    const recs = (result.recommendedProducts || []).slice(0, 6).map((p) => ({
+      id: p.id || p._id, name: p.name, price: p.price, emoji: p.emoji, brand: p.brand,
+      images: p.images && p.images.length ? [p.images[0]] : [],
+    }));
+    localStorage.setItem('dg_last_health', JSON.stringify({ metrics, defs, recs, at: Date.now() }));
   } catch (e) { /* ignore quota errors */ }
   renderSkinHealth();
+  renderHomeProducts();
 }
 
 function renderSkinHealth() {

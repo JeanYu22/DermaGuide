@@ -63,6 +63,12 @@
         <div class="header">
             <div class="header-content">
                 <div class="brand"><span class="brand-mark"><img src="/img/logo.svg" alt=""></span><span class="brand-name"><span class="brand-word-derma">Derma</span><span class="brand-word-guide">Guide</span></span></div>
+                <nav class="top-nav" aria-label="Primary">
+                    <a onclick="scrollToHome()" data-i18n="nav_home">Home</a>
+                    <a onclick="openAnalyzer()" data-i18n="nav_analyze">Analysis</a>
+                    <a onclick="scrollToProducts()" data-i18n="nav_shop">Shop</a>
+                    <a onclick="openChat()" data-i18n="nav_chat">Chat</a>
+                </nav>
                 <div class="header-actions">
                     <div class="lang-switch" id="headerLang"></div>
                     <button class="header-link" id="authLink" onclick="openAuth()" data-i18n="sign_in">Sign In</button>
@@ -74,22 +80,27 @@
         <div class="lily-card" id="lilyCard">
             <div class="lily-card-avatar" data-lily></div>
             <div class="lily-card-body">
-                <p class="lily-card-text" data-i18n="lily_greeting">Hi, I'm Lily, your AI skincare guide. Ready to analyze your skin?</p>
-                <button class="btn btn-gold btn-full" onclick="openAnalyzer()">📷 <span data-i18n="start_skin_analysis">Start Skin Analysis</span></button>
+                <p class="lily-card-text lily-type" id="lilyType" data-i18n="lily_greeting">Hi, I'm Lily, your AI Skincare Consultant. Let's check your skin before perfecting your glow.</p>
             </div>
         </div>
-
-        <div class="quick-actions">
-            <div class="action-card" onclick="openChat()"><div class="action-icon">💬</div><div class="action-title" data-i18n="qa_consult">Consultation</div></div>
-            <div class="action-card" onclick="openAnalyzer()"><div class="action-icon">📸</div><div class="action-title" data-i18n="qa_scan">Skin Scan</div></div>
-            <div class="action-card" onclick="scrollToTips()"><div class="action-icon">💡</div><div class="action-title" data-i18n="qa_tips">Skincare Tips</div></div>
-            <div class="action-card" onclick="scrollToProducts()"><div class="action-icon">🛍️</div><div class="action-title" data-i18n="qa_shopall">Shop All</div></div>
+        <div class="lily-cta-row">
+            <button class="btn btn-gold" onclick="openChat()" data-i18n="chat_to_lily">Chat to Lily</button>
+            <button class="btn btn-gold" onclick="openAnalyzer()" data-i18n="skin_analysis_btn">Skin Analysis</button>
         </div>
 
         <div class="section-header">
-            <h2 class="section-title" data-i18n="top_picks">Top Picks for You</h2>
+            <h2 class="section-title accent" data-i18n="top_picks">Recommended for You</h2>
         </div>
         <div class="home-products" id="homeProducts"></div>
+
+        <div class="promo-banner">
+            <div class="promo-copy">
+                <h3 data-i18n="promo_title">Winter Hydration Boost!</h3>
+                <p data-i18n="promo_text">Special offer on all serums and moisturizers to combat dry winter skin.</p>
+                <button class="btn btn-gold btn-small" onclick="scrollToProducts()" data-i18n="promo_cta">Shop the Sale</button>
+            </div>
+            <div class="promo-art" aria-hidden="true">❄️💧</div>
+        </div>
 
         <div class="section-header">
             <h2 class="section-title" data-i18n="recent_skin_health">Recent Skin Health</h2>
@@ -113,10 +124,11 @@
         <div class="tips-grid" id="tipsGrid"></div>
 
         <div class="bottom-nav">
-            <div class="nav-item" onclick="scrollToHome()"><div class="nav-icon">🏠</div><div class="nav-label" data-i18n="nav_home">Home</div></div>
-            <div class="nav-item" onclick="openAnalyzer()"><div class="nav-icon">📸</div><div class="nav-label" data-i18n="nav_analyze">Analysis</div></div>
-            <div class="nav-item" onclick="scrollToProducts()"><div class="nav-icon">🛍️</div><div class="nav-label" data-i18n="nav_shop">Shop</div></div>
-            <div class="nav-item" onclick="openProfile()"><div class="nav-icon">👤</div><div class="nav-label" data-i18n="nav_profile">Profile</div></div>
+            <div class="nav-item active" onclick="setNavActive(this); scrollToHome()"><div class="nav-icon">🏠</div><div class="nav-label" data-i18n="nav_home">Home</div></div>
+            <div class="nav-item" onclick="setNavActive(this); openAnalyzer()"><div class="nav-icon">📸</div><div class="nav-label" data-i18n="nav_analyze">Analysis</div></div>
+            <div class="nav-item" onclick="setNavActive(this); scrollToProducts()"><div class="nav-icon">🛍️</div><div class="nav-label" data-i18n="nav_shop">Shop</div></div>
+            <div class="nav-item" onclick="setNavActive(this); openChat()"><div class="nav-icon">💬</div><div class="nav-label" data-i18n="nav_chat">Chat</div></div>
+            <div class="nav-item" onclick="setNavActive(this); openProfile()"><div class="nav-icon">👤</div><div class="nav-label" data-i18n="nav_profile">Profile</div></div>
         </div>
 
         <div class="ai-assistant" id="aiAssistant">

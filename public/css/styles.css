@@ -34,6 +34,11 @@
     --mint-pale: #F1EEDD;
     --gold: #B88A2A;
     --gold-dark: #9C7522;
+    /* Teal accent (Stitch): headings, active nav, checks, Lily AI avatar */
+    --teal: #177363;
+    --teal-dark: #115A4E;
+    --ice-1: #E9F3F8;
+    --ice-2: #D5E8F1;
 
     /* Legacy aliases — kept so inline styles + untouched rules stay valid */
     --forest: #141414;      /* → text black (headings/emphasis) */
@@ -233,30 +238,52 @@ h1, h2, h3, h4 { font-family: 'Playfair Display', Georgia, serif; letter-spacing
 .close-assistant { position: absolute; top: -8px; right: -8px; width: 26px; height: 26px; background: var(--coral); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 1.1rem; font-weight: bold; cursor: pointer; box-shadow: 0 2px 10px rgba(0,0,0,.2); transition: all .3s; }
 .close-assistant:active { transform: scale(.9); }
 
-/* Lily greeting card — leads with an action, like the reference home screen */
+/* Lily hero card (Stitch): robot avatar left, typewriter greeting right,
+   inside a white gold-bordered card; the two gold CTAs sit below it. */
 .lily-card {
-    position: relative; display: flex; flex-direction: column; align-items: center; text-align: center; gap: .85rem;
-    margin: 3.6rem auto 0; padding: 3.2rem 1.5rem 1.5rem; max-width: 560px;
-    background: linear-gradient(135deg, rgba(217,169,60,.14), rgba(139,191,160,.12)), rgba(255,255,255,.85);
-    backdrop-filter: blur(14px); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow-soft);
+    display: flex; align-items: center; gap: 1rem;
+    margin: 1.4rem auto 0; padding: 1.1rem 1.2rem; max-width: var(--app-max);
+    width: calc(100% - 3rem);
+    background: var(--pearl); border: 1.5px solid rgba(184,138,42,.5);
+    border-radius: var(--radius-lg); box-shadow: var(--shadow-soft);
 }
 .lily-card-avatar {
-    position: absolute; top: -46px; left: 50%; transform: translateX(-50%);
-    width: 92px; height: 92px; border-radius: 50%; overflow: hidden;
-    border: 4px solid var(--pearl); box-shadow: 0 12px 26px rgba(169,120,31,.28);
-    background: radial-gradient(circle at 50% 30%, #fff, var(--soft-clay));
+    width: 96px; height: 96px; flex: 0 0 auto; border-radius: 20px; overflow: hidden;
+    box-shadow: 0 10px 22px rgba(23,115,99,.22);
 }
-.lily-card-body { width: 100%; }
-.lily-card-text { color: var(--cocoa-soft); font-size: 1rem; line-height: 1.55; margin-bottom: 1rem; font-weight: 600; }
-.lily-card-body .btn { width: 100%; max-width: 340px; }
+.lily-card-body { flex: 1; min-width: 0; }
+.lily-card-text { color: var(--deep-cocoa); font-size: .98rem; line-height: 1.55; font-weight: 600; margin: 0; }
+.lily-type { font-family: 'Courier New', ui-monospace, monospace; }
+.lily-type::after { content: '|'; color: var(--gold-dark); animation: caretBlink 1s steps(1) infinite; }
+@keyframes caretBlink { 50% { opacity: 0; } }
+.lily-cta-row { display: flex; gap: .8rem; max-width: var(--app-max); width: calc(100% - 3rem); margin: 1rem auto 0; }
+.lily-cta-row .btn { flex: 1; }
+/* Gold pill with deep-teal text (Stitch CTA style) */
+.btn-gold { color: var(--teal-dark); text-shadow: 0 1px 0 rgba(255,255,255,.3); }
+
+/* Teal serif section heading with a gold underline (Stitch "Recommended for You") */
+.section-title.accent { color: var(--teal); }
+.section-title.accent::after { content: ''; display: block; width: 130px; height: 3px; margin-top: .3rem;
+    border-radius: 2px; background: linear-gradient(90deg, var(--soft-clay), var(--coral)); }
+
+/* Icy promo banner ("Winter Hydration Boost!") */
+.promo-banner {
+    display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+    max-width: var(--app-max); width: calc(100% - 3rem); margin: 1.4rem auto; padding: 1.2rem 1.3rem;
+    background: linear-gradient(120deg, var(--ice-1), var(--ice-2)); border: 1px solid rgba(23,115,99,.18);
+    border-radius: var(--radius-lg); box-shadow: var(--shadow-soft);
+}
+.promo-copy h3 { color: var(--teal); font-size: 1.3rem; margin-bottom: .3rem; }
+.promo-copy p { color: var(--cocoa-soft); font-size: .88rem; line-height: 1.5; margin: 0 0 .8rem; }
+.promo-art { font-size: 2.4rem; flex: 0 0 auto; filter: drop-shadow(0 6px 12px rgba(23,115,99,.25)); }
 
 /* Home product strip ("Top Picks for You") */
 .home-products { display: flex; gap: .8rem; overflow-x: auto; padding: 0 1.5rem .4rem; max-width: var(--app-max); margin: 0 auto; scroll-snap-type: x mandatory; }
 .home-products::-webkit-scrollbar { height: 5px; }
 .home-products::-webkit-scrollbar-thumb { background: var(--line); border-radius: 3px; }
 .home-product-card {
-    flex: 0 0 150px; scroll-snap-align: start;
-    background: var(--mint-pale); border: 1px solid var(--line); border-radius: var(--radius-md); padding: .8rem;
+    flex: 0 0 158px; scroll-snap-align: start;
+    background: var(--pearl); border: 1.5px solid rgba(184,138,42,.45); border-radius: var(--radius-md); padding: .8rem;
     cursor: pointer; box-shadow: var(--shadow-soft); transition: transform .2s ease;
 }
 .home-product-card:hover { transform: translateY(-3px); }
@@ -264,7 +291,15 @@ h1, h2, h3, h4 { font-family: 'Playfair Display', Georgia, serif; letter-spacing
 .home-product-img img { width: 100%; height: 100%; object-fit: cover; }
 .home-product-brand { font-size: .66rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--sage-dark); margin-bottom: .1rem; }
 .home-product-name { font-size: .86rem; font-weight: 700; color: var(--deep-cocoa); margin-bottom: .15rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.home-product-price { font-size: .92rem; font-weight: 800; color: var(--gold-dark); margin-bottom: .55rem; }
+.home-product-price { font-size: .92rem; font-weight: 800; color: var(--gold-dark); }
+.home-product-buy { display: flex; align-items: center; justify-content: space-between; gap: .4rem; margin: .1rem 0 .55rem; min-height: 44px; }
+/* Gold match ring with teal check (Stitch "95% Match" badge) */
+.match-ring { position: relative; width: 44px; height: 44px; border-radius: 50%; flex: 0 0 auto;
+    border: 2px solid var(--coral); background: var(--pearl); display: grid; place-content: center; text-align: center; line-height: 1; }
+.match-ring b { font-size: .68rem; color: var(--gold-dark); }
+.match-ring small { font-size: .5rem; color: var(--muted); font-weight: 700; }
+.match-ring em { position: absolute; right: -5px; bottom: -5px; width: 16px; height: 16px; border-radius: 50%;
+    background: var(--teal); color: #fff; font-style: normal; font-size: .6rem; font-weight: 900; display: grid; place-items: center; border: 2px solid var(--pearl); }
 
 /* Recent Skin Health summary card */
 .skin-health-card { max-width: var(--app-max); margin: 0 auto; padding: 0 1.5rem; }
@@ -313,7 +348,7 @@ h1, h2, h3, h4 { font-family: 'Playfair Display', Georgia, serif; letter-spacing
 .product-card:hover { transform: translateY(-4px); box-shadow: var(--shadow); }
 .product-card:active { transform: scale(.98); }
 .empty-grid { grid-column: 1/-1; text-align: center; padding: 2.5rem; color: var(--muted); }
-.product-image { aspect-ratio: 1/1; background: linear-gradient(135deg, rgba(217, 169, 60,.35), rgba(139, 191, 160,.32)); display: flex; align-items: center; justify-content: center; font-size: 3rem; position: relative; overflow: hidden; }
+.product-image { aspect-ratio: 1/1; background: linear-gradient(160deg, #F2ECE1, #E9E1D2); display: flex; align-items: center; justify-content: center; font-size: 3rem; position: relative; overflow: hidden; }
 .product-img { width: 100%; height: 100%; object-fit: cover; }
 .product-emoji { font-size: 3.2rem; }
 
@@ -337,8 +372,15 @@ h1, h2, h3, h4 { font-family: 'Playfair Display', Georgia, serif; letter-spacing
 .cert-badge.cruelty-free { background: var(--soft-clay); color: var(--deep-cocoa); }
 .product-info { padding: .75rem .85rem .95rem; }
 .product-name { font-size: .93rem; font-weight: 700; color: var(--deep-cocoa); margin-bottom: .2rem; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.product-brand { font-size: .76rem; color: var(--muted); margin-bottom: .45rem; }
 .product-desc { font-size: .78rem; color: var(--cocoa-soft); margin-bottom: .4rem; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
-.product-price { font-size: 1.1rem; font-weight: 800; color: var(--coral-dark); }
+.product-buy { display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
+.product-price { font-size: 1.05rem; font-weight: 800; color: var(--deep-cocoa); }
+/* Cream gold-bordered "Add" pill (Stitch shop cards) */
+.add-btn { border: 1.5px solid rgba(184,138,42,.5); background: #F7EBD7; color: var(--deep-cocoa);
+    border-radius: 12px; padding: .45rem 1.05rem; font-weight: 800; font-size: .9rem; cursor: pointer; font-family: inherit; transition: transform .15s ease, background .15s ease; }
+.add-btn:hover { background: #F2E2C4; }
+.add-btn:active { transform: scale(.95); }
 .out-of-stock { font-size: .7rem; color: var(--coral); font-weight: 700; display: block; }
 
 /* ML validation boxes */
@@ -371,7 +413,7 @@ h1, h2, h3, h4 { font-family: 'Playfair Display', Georgia, serif; letter-spacing
 .message-avatar img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 14%; }
 .message-col { max-width: 82%; display: flex; flex-direction: column; }
 .message.user .message-col { align-items: flex-end; }
-.message-bubble { padding: .95rem 1.1rem; border-radius: 20px; line-height: 1.55; border: 1px solid var(--line); }
+.message-bubble { padding: .95rem 1.1rem; border-radius: 20px; line-height: 1.55; border: 1.5px solid rgba(184,138,42,.55); }
 .message.assistant .message-bubble { background: var(--pearl); box-shadow: var(--shadow-soft); border-top-left-radius: 6px; }
 .message.user .message-bubble { background: linear-gradient(135deg, #fffdf6, #fbf1d8); color: var(--deep-cocoa); border-top-right-radius: 6px; box-shadow: var(--shadow-soft); }
 .message-label { font-size: .7rem; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; color: var(--gold-dark); margin-bottom: .3rem; }
@@ -393,7 +435,7 @@ h1, h2, h3, h4 { font-family: 'Playfair Display', Georgia, serif; letter-spacing
 .rec-vcard { flex: 0 0 236px; width: 236px; background: var(--pearl); border: 1px solid var(--line); border-radius: var(--radius-md); overflow: hidden; cursor: pointer; display: flex; flex-direction: column; box-shadow: var(--shadow-soft); transition: transform .2s, box-shadow .2s; }
 .rec-vcard:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
 .rec-vcard:active { transform: scale(.98); }
-.rec-vcard-img { position: relative; width: 100%; aspect-ratio: 1/1; background: linear-gradient(135deg, rgba(217, 169, 60,.35), rgba(139, 191, 160,.32)); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.rec-vcard-img { position: relative; width: 100%; aspect-ratio: 1/1; background: linear-gradient(160deg, #F2ECE1, #E9E1D2); display: flex; align-items: center; justify-content: center; overflow: hidden; }
 .rec-vcard-img img { width: 100%; height: 100%; object-fit: cover; }
 .match-badge { position: absolute; top: .5rem; left: .5rem; background: rgba(58,47,31,.78); color: #fff8f3; font-size: .68rem; font-weight: 800; padding: .28rem .55rem; border-radius: 999px; }
 /* Match Score in the recommendation card body (like the reference) */
@@ -560,8 +602,9 @@ h1, h2, h3, h4 { font-family: 'Playfair Display', Georgia, serif; letter-spacing
 
 /* ============================= Bottom nav ============================= */
 /* Centered pill that tracks the phone-width app canvas */
-.bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: min(var(--app-max), 100%); background: rgba(255,248,243,.94); backdrop-filter: blur(18px); border: 1px solid var(--line); border-bottom: 0; border-radius: 22px 22px 0 0; box-shadow: 0 -10px 30px rgba(58,47,31,.1); display: grid; grid-template-columns: repeat(4, 1fr); padding: .7rem 0; z-index: 100; }
-.nav-item.active { color: var(--gold-dark); }
+.bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: min(var(--app-max), 100%); background: rgba(255,253,248,.96); backdrop-filter: blur(18px); border: 1px solid var(--line); border-bottom: 0; border-radius: 22px 22px 0 0; box-shadow: 0 -10px 30px rgba(120,88,32,.12); display: grid; grid-template-columns: repeat(5, 1fr); padding: .7rem 0; z-index: 100; }
+.nav-item.active { color: var(--teal); font-weight: 800; }
+.nav-item.active .nav-icon { filter: drop-shadow(0 2px 5px rgba(23,115,99,.4)); }
 .nav-item { text-align: center; cursor: pointer; padding: .4rem; transition: all .3s; color: var(--cocoa-soft); }
 .nav-item:active { transform: scale(.9); }
 .nav-icon { font-size: 1.4rem; margin-bottom: .2rem; }
@@ -627,6 +670,9 @@ h1, h2, h3, h4 { font-family: 'Playfair Display', Georgia, serif; letter-spacing
    ===================================================================== */
 /* Circular avatars: transparent head-shoulders cut-out, scaled — never warped */
 .lily-img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 14%; display: block; }
+/* Teal AI-robot avatar (Stitch): fills any avatar slot; idle blink */
+.lily-ai { width: 100%; height: 100%; display: block; }
+.lily-ai .lily-eyes { transform-origin: 60px 60px; animation: lilyBlink 5.2s infinite; }
 .nurse-avatar, .assistant-avatar { overflow: hidden; }
 .assistant-face { width: 100%; height: 100%; display: block; }
 .chat-title .lily-badge { width: 34px; height: 34px; border-radius: 11px; overflow: hidden; display: inline-grid; place-items: center;
@@ -743,3 +789,48 @@ h1, h2, h3, h4 { font-family: 'Playfair Display', Georgia, serif; letter-spacing
 .routine-cta-title { font-weight: 800; color: var(--deep-cocoa); }
 .routine-cta-sub { font-size: .86rem; color: var(--cocoa-soft); margin-top: .15rem; }
 .routine-cta .btn { min-width: 200px; flex: 1; }
+
+/* =====================================================================
+   Desktop website layer (same Stitch style, desktop-appropriate layout)
+   ===================================================================== */
+/* Header nav links — hidden on mobile, shown on desktop */
+.top-nav { display: none; }
+
+@media (min-width: 1024px) {
+    :root { --desk-max: 1160px; }
+
+    /* Top nav replaces the bottom tab bar */
+    .top-nav { display: flex; align-items: center; gap: 1.8rem; flex: 1; justify-content: center; }
+    .top-nav a { cursor: pointer; font-weight: 700; color: var(--cocoa-soft); padding: .35rem .1rem; border-bottom: 2px solid transparent; transition: color .2s, border-color .2s; }
+    .top-nav a:hover { color: var(--teal); border-bottom-color: var(--coral); }
+    .bottom-nav { display: none; }
+    .header-content { max-width: var(--desk-max); }
+    .shop-view { padding-bottom: 40px; }
+
+    /* Home */
+    .lily-card { max-width: 880px; padding: 1.6rem 2rem; gap: 1.6rem; }
+    .lily-card-avatar { width: 132px; height: 132px; border-radius: 26px; }
+    .lily-card-text { font-size: 1.18rem; }
+    .lily-cta-row { max-width: 880px; }
+    .lily-cta-row .btn { max-width: 300px; margin: 0 auto; }
+    .section-header, .skin-health-card { max-width: var(--desk-max); }
+    .home-products { max-width: var(--desk-max); display: grid; grid-template-columns: repeat(4, 1fr); overflow: visible; }
+    .home-product-card { flex: none; }
+    .promo-banner { max-width: var(--desk-max); padding: 1.8rem 2.2rem; }
+    .promo-art { font-size: 3.4rem; }
+
+    /* Shop grid + tips */
+    .products-grid { max-width: var(--desk-max); grid-template-columns: repeat(4, 1fr); }
+    .tips-grid { max-width: var(--desk-max); grid-template-columns: repeat(3, 1fr); }
+
+    /* Analyzer: two-panel (sticky photo left, results right) */
+    .analyzer-content { max-width: var(--desk-max); }
+    .analyzer-layout { max-width: var(--desk-max); grid-template-columns: 400px minmax(0, 1fr); }
+    .analyze-left { position: sticky; top: 90px; }
+    .result-charts { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+
+    /* Chat: comfortable reading column */
+    .chat-messages, .chat-input-row, .chat-prompt-chips { max-width: 760px; }
+
+    /* Admin already wide */
+}
