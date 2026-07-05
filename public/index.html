@@ -64,71 +64,80 @@
             <div class="header-content">
                 <div class="brand"><span class="brand-mark"><img src="/img/logo.png" alt=""></span><span class="brand-name"><span class="brand-word-derma">Derma</span><span class="brand-word-guide">Guide</span></span></div>
                 <nav class="top-nav" aria-label="Primary">
-                    <a onclick="scrollToHome()" data-i18n="nav_home">Home</a>
+                    <a onclick="showSection('home')" data-i18n="nav_home">Home</a>
                     <a onclick="openAnalyzer()" data-i18n="nav_analyze">Analysis</a>
-                    <a onclick="scrollToProducts()" data-i18n="nav_shop">Shop</a>
+                    <a onclick="showSection('shop')" data-i18n="nav_shop">Shop</a>
                     <a onclick="openChat()" data-i18n="nav_chat">Chat</a>
                 </nav>
                 <div class="header-actions">
                     <div class="lang-switch" id="headerLang"></div>
                     <button class="header-link" id="authLink" onclick="openAuth()" data-i18n="sign_in">Sign In</button>
-                    <button class="header-icon" onclick="openCart()">🛒<span class="cart-count" id="cartCount" data-count="0"></span></button>
+                    <button class="header-icon" onclick="openCart()" aria-label="Cart"><span data-ic="cart"></span><span class="cart-count" id="cartCount" data-count="0"></span></button>
                 </div>
             </div>
         </div>
 
-        <div class="lily-card" id="lilyCard">
-            <div class="lily-card-avatar" data-lily></div>
-            <div class="lily-card-body">
-                <p class="lily-card-text lily-type" id="lilyType" data-i18n="lily_greeting">Hi, I'm Lily, your AI Skincare Consultant. Let's check your skin before perfecting your glow.</p>
+        <!-- ============ HOME dashboard ============ -->
+        <div class="app-section" id="homeSection">
+            <div class="lily-card" id="lilyCard">
+                <div class="lily-card-avatar" data-lily></div>
+                <div class="lily-card-body">
+                    <p class="lily-card-text lily-type" id="lilyType" data-i18n="lily_greeting">Hi, I'm Lily, your AI Skincare Consultant. Let's check your skin before perfecting your glow.</p>
+                    <div class="lily-cta-row">
+                        <button class="btn btn-primary" onclick="openAnalyzer()"><span data-ic="scan"></span> <span data-i18n="skin_analysis_btn">Skin Analysis</span></button>
+                        <button class="btn btn-ghost" onclick="openChat()"><span data-ic="chat"></span> <span data-i18n="chat_to_lily">Chat to Lily</span></button>
+                    </div>
+                </div>
             </div>
-        </div>
-        <div class="lily-cta-row">
-            <button class="btn btn-gold" onclick="openChat()" data-i18n="chat_to_lily">Chat to Lily</button>
-            <button class="btn btn-gold" onclick="openAnalyzer()" data-i18n="skin_analysis_btn">Skin Analysis</button>
-        </div>
 
-        <div class="section-header">
-            <h2 class="section-title accent" data-i18n="top_picks">Recommended for You</h2>
-        </div>
-        <div class="home-products" id="homeProducts"></div>
-
-        <div class="promo-banner">
-            <div class="promo-copy">
-                <h3 data-i18n="promo_title">Winter Hydration Boost!</h3>
-                <p data-i18n="promo_text">Special offer on all serums and moisturizers to combat dry winter skin.</p>
-                <button class="btn btn-gold btn-small" onclick="scrollToProducts()" data-i18n="promo_cta">Shop the Sale</button>
+            <div class="section-header">
+                <h2 class="section-title" data-i18n="top_picks">Recommended for You</h2>
+                <a class="section-link" onclick="showSection('shop')" data-i18n="see_all">See all</a>
             </div>
-            <div class="promo-art" aria-hidden="true">❄️💧</div>
+            <div class="home-products" id="homeProducts"></div>
+
+            <div class="promo-banner">
+                <div class="promo-copy">
+                    <div class="promo-eyebrow" data-i18n="promo_eyebrow">Seasonal offer</div>
+                    <h3 data-i18n="promo_title">Winter Hydration Boost</h3>
+                    <p data-i18n="promo_text">Special offer on all serums and moisturizers to combat dry winter skin.</p>
+                    <button class="btn btn-primary btn-small" onclick="showSection('shop')" data-i18n="promo_cta">Shop the Sale</button>
+                </div>
+                <div class="promo-art" aria-hidden="true"><span data-ic="drop"></span></div>
+            </div>
+
+            <div class="section-header">
+                <h2 class="section-title" data-i18n="recent_skin_health">Recent Skin Health</h2>
+            </div>
+            <div class="skin-health-card" id="skinHealthCard"></div>
         </div>
 
-        <div class="section-header">
-            <h2 class="section-title" data-i18n="recent_skin_health">Recent Skin Health</h2>
-        </div>
-        <div class="skin-health-card" id="skinHealthCard"></div>
+        <!-- ============ SHOP ============ -->
+        <div class="app-section" id="shopSection" hidden>
+            <div class="section-header">
+                <h2 class="section-title" data-i18n="shop_title">Shop Products</h2>
+                <div class="shop-search-wrap"><span class="shop-search-ic" data-ic="search"></span>
+                    <input type="search" class="shop-search" id="shopSearch" placeholder="Search products, ingredients…" data-i18n-ph="search_ph"></div>
+                <div class="filter-chips" id="filterChips"></div>
+                <p class="shop-count" id="shopCount"></p>
+            </div>
+            <div id="productsSection">
+                <div class="products-grid" id="productsContainer"></div>
+                <div class="shop-loadmore" id="shopLoadMore"></div>
+            </div>
 
-        <div class="section-header">
-            <h2 class="section-title" data-i18n="shop_title">Shop Products</h2>
-            <input type="search" class="shop-search" id="shopSearch" placeholder="🔍 Search products…" data-i18n-ph="search_ph">
-            <div class="filter-chips" id="filterChips"></div>
-            <p class="shop-count" id="shopCount"></p>
+            <div class="section-header" style="margin-top: 2rem;" id="tipsSection">
+                <h2 class="section-title" data-i18n="tips_title">Expert Tips</h2>
+            </div>
+            <div class="tips-grid" id="tipsGrid"></div>
         </div>
-        <div id="productsSection">
-            <div class="products-grid" id="productsContainer"></div>
-            <div class="shop-loadmore" id="shopLoadMore"></div>
-        </div>
-
-        <div class="section-header" style="margin-top: 2rem;" id="tipsSection">
-            <h2 class="section-title" data-i18n="tips_title">Expert Tips</h2>
-        </div>
-        <div class="tips-grid" id="tipsGrid"></div>
 
         <div class="bottom-nav">
-            <div class="nav-item active" data-nav="home" onclick="syncNav('home'); scrollToHome()"><div class="nav-icon">🏠</div><div class="nav-label" data-i18n="nav_home">Home</div></div>
-            <div class="nav-item" data-nav="analyze" onclick="openAnalyzer()"><div class="nav-icon">📸</div><div class="nav-label" data-i18n="nav_analyze">Analysis</div></div>
-            <div class="nav-item" data-nav="shop" onclick="syncNav('shop'); scrollToProducts()"><div class="nav-icon">🛍️</div><div class="nav-label" data-i18n="nav_shop">Shop</div></div>
-            <div class="nav-item" data-nav="chat" onclick="openChat()"><div class="nav-icon">💬</div><div class="nav-label" data-i18n="nav_chat">Chat</div></div>
-            <div class="nav-item" data-nav="profile" onclick="syncNav('profile'); openProfile()"><div class="nav-icon">👤</div><div class="nav-label" data-i18n="nav_profile">Profile</div></div>
+            <div class="nav-item active" data-nav="home" onclick="showSection('home')"><div class="nav-icon" data-ic="home"></div><div class="nav-label" data-i18n="nav_home">Home</div></div>
+            <div class="nav-item" data-nav="analyze" onclick="openAnalyzer()"><div class="nav-icon" data-ic="scan"></div><div class="nav-label" data-i18n="nav_analyze">Analysis</div></div>
+            <div class="nav-item" data-nav="shop" onclick="showSection('shop')"><div class="nav-icon" data-ic="bag"></div><div class="nav-label" data-i18n="nav_shop">Shop</div></div>
+            <div class="nav-item" data-nav="chat" onclick="openChat()"><div class="nav-icon" data-ic="chat"></div><div class="nav-label" data-i18n="nav_chat">Chat</div></div>
+            <div class="nav-item" data-nav="profile" onclick="openProfile()"><div class="nav-icon" data-ic="user"></div><div class="nav-label" data-i18n="nav_profile">Profile</div></div>
         </div>
 
         <div class="ai-assistant" id="aiAssistant">

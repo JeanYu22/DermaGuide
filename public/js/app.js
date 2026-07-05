@@ -131,6 +131,37 @@ function injectLilyAvatars(root) {
   });
 }
 
+// ---------------------------------------------------------------------------
+// One consistent line-icon set (replaces emoji in all UI chrome). 24x24,
+// 1.75 stroke, currentColor — so icons inherit text color everywhere.
+// ---------------------------------------------------------------------------
+const ICONS = {
+  home: '<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V9.5"/>',
+  scan: '<path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><circle cx="12" cy="12" r="3.2"/>',
+  bag: '<path d="M6 8h12l-1 12H7L6 8Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/>',
+  chat: '<path d="M4 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H9l-4 4v-4a1 1 0 0 1 0-0Z"/>',
+  user: '<circle cx="12" cy="8" r="3.4"/><path d="M5 20a7 7 0 0 1 14 0"/>',
+  search: '<circle cx="11" cy="11" r="6.5"/><path d="m20 20-3.5-3.5"/>',
+  cart: '<circle cx="9" cy="20" r="1.4"/><circle cx="17" cy="20" r="1.4"/><path d="M3 4h2l2.2 11h10l2-8H6.5"/>',
+  spark: '<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3Z"/>',
+  drop: '<path d="M12 3s6 6.5 6 11a6 6 0 1 1-12 0c0-4.5 6-11 6-11Z"/>',
+  bulb: '<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-4 10.5c.8.8 1 1.3 1 2.5h6c0-1.2.2-1.7 1-2.5A6 6 0 0 0 12 3Z"/>',
+  camera: '<path d="M4 8a2 2 0 0 1 2-2h1.5l1-1.6h7l1 1.6H18a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z"/><circle cx="12" cy="12.5" r="3.2"/>',
+  back: '<path d="M15 5l-7 7 7 7"/>',
+  send: '<path d="M4 12 20 4l-6 16-3-7-7-1Z"/>',
+  check: '<path d="M5 12.5 10 17l9-10"/>',
+  heart: '<path d="M12 20s-7-4.6-9-9a4.2 4.2 0 0 1 7.6-3.1L12 9l1.4-1.1A4.2 4.2 0 0 1 21 11c-2 4.4-9 9-9 9Z"/>',
+};
+function icon(name, cls) {
+  return `<svg class="ic ${cls || ''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name] || ''}</svg>`;
+}
+// Fill every [data-ic="name"] placeholder with its icon.
+function injectIcons(root) {
+  (root || document).querySelectorAll('[data-ic]').forEach((el) => {
+    if (!el.dataset.icDone) { el.innerHTML = icon(el.dataset.ic); el.dataset.icDone = '1'; }
+  });
+}
+
 // Clinical face-scan loader — the real scan-device art with an animated
 // light sweep + glow pulse (mirrors the promo's face-scan device).
 function scanFaceHTML(caption, opts = {}) {
@@ -232,7 +263,7 @@ function analyzerLeftHTML() {
       <li>${L('tip_nodiag', 'DermaGuide does not diagnose medical conditions.')}</li>
       <li>${L('tip_derived', 'Only derived cosmetic metrics are saved.')}</li>
     </ul>
-    <button class="btn btn-primary btn-full" onclick="document.getElementById('fileInput').click()">📸 ${L('start_snapshot', 'Start Private Skin Snapshot')}</button>
+    <button class="btn btn-primary btn-full" onclick="document.getElementById('fileInput').click()">${icon("scan")} ${L('start_snapshot', 'Start Private Skin Snapshot')}</button>
   </aside>`;
 }
 function analyzerRightEmptyHTML() {
@@ -264,10 +295,21 @@ function scanFrameHTML() {
 }
 function setAnalyzerRight(html) { const r = document.getElementById('analyzeRight'); if (r) r.innerHTML = html; }
 function closeAnalyzer() { document.getElementById('analyzerModal').classList.remove('active'); syncNav('home'); }
-function scrollToProducts() { document.getElementById('productsSection').scrollIntoView({ behavior: 'smooth' }); }
-function scrollToTips() { document.getElementById('tipsSection').scrollIntoView({ behavior: 'smooth' }); }
-function scrollToHome() { const c = document.getElementById('lilyCard'); if (c) c.scrollIntoView({ behavior: 'smooth' }); }
-function openProfile() { openAuth(); }
+// Switch between the Home dashboard and the Shop section (clean IA — the
+// two no longer stack on one endless page).
+function showSection(name) {
+  const home = document.getElementById('homeSection');
+  const shop = document.getElementById('shopSection');
+  if (home) home.hidden = name !== 'home';
+  if (shop) shop.hidden = name !== 'shop';
+  syncNav(name === 'shop' ? 'shop' : 'home');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  if (name === 'shop' && !State.products.length) loadProducts();
+}
+function scrollToProducts() { showSection('shop'); }
+function scrollToTips() { showSection('shop'); }
+function scrollToHome() { showSection('home'); }
+function openProfile() { syncNav('profile'); openAuth(); }
 function setNavActive(el) {
   document.querySelectorAll('.bottom-nav .nav-item').forEach((n) => n.classList.remove('active'));
   if (el) el.classList.add('active');
@@ -277,19 +319,10 @@ function syncNav(name) {
   document.querySelectorAll('.bottom-nav .nav-item').forEach((n) => n.classList.toggle('active', n.dataset.nav === name));
 }
 
-// Typewriter effect on Lily's home greeting (Stitch hero card).
-let lilyTypeTimer = null;
+// (Typewriter gimmick removed — the greeting is just clean localized text now.)
 function typeLilyGreeting() {
   const el = document.getElementById('lilyType');
-  if (!el) return;
-  const text = L('lily_greeting', "Hi, I'm Lily, your AI Skincare Consultant. Let's check your skin before perfecting your glow.");
-  clearInterval(lilyTypeTimer);
-  el.textContent = '';
-  let i = 0;
-  lilyTypeTimer = setInterval(() => {
-    el.textContent = text.slice(0, ++i);
-    if (i >= text.length) clearInterval(lilyTypeTimer);
-  }, 26);
+  if (el) el.textContent = L('lily_greeting', "Hi, I'm Lily, your AI Skincare Consultant. Let's check your skin before perfecting your glow.");
 }
 
 // ===========================================================================
@@ -450,7 +483,7 @@ function renderSkinHealth() {
   if (!cached || !cached.metrics) {
     el.innerHTML = `<div class="skin-health-empty">
       <span>${L('no_scan_yet', "You haven't scanned your skin yet.")}</span>
-      <button class="btn btn-secondary btn-small" onclick="openAnalyzer()">📸 ${L('start_snapshot', 'Start Private Skin Snapshot')}</button>
+      <button class="btn btn-secondary btn-small" onclick="openAnalyzer()">${icon("scan")} ${L('start_snapshot', 'Start Private Skin Snapshot')}</button>
     </div>`;
     return;
   }
@@ -466,12 +499,8 @@ function renderSkinHealth() {
 }
 function healthIcon(key) {
   const k = (key || '').toLowerCase();
-  if (k.includes('hydr') || k.includes('moist') || k.includes('dehydr')) return '💧';
-  if (k.includes('clar') || k.includes('radi') || k.includes('tone') || k.includes('pigment')) return '✨';
-  if (k.includes('text') || k.includes('pore')) return '🧴';
-  if (k.includes('oil') || k.includes('sebum')) return '🫧';
-  if (k.includes('acne') || k.includes('red') || k.includes('sensit')) return '🌿';
-  return '🌿';
+  if (k.includes('hydr') || k.includes('moist') || k.includes('dehydr')) return icon('drop');
+  return icon('spark');
 }
 
 function renderTips() {
@@ -1460,7 +1489,7 @@ function analyzerBusyHTML(caption) {
 function analyzerErrorHTML(icon, title, msg) {
   return `<div class="analyze-empty"><div class="analyze-empty-icon">${icon}</div>
     <div class="analyze-empty-title">${title}</div><div class="analyze-empty-sub">${msg}</div>
-    <button class="btn btn-primary" style="margin-top:1rem;" onclick="retakePhoto()">📸 ${L('upload_diff', 'Upload a different photo')}</button></div>`;
+    <button class="btn btn-primary" style="margin-top:1rem;" onclick="retakePhoto()">${icon("scan")} ${L('upload_diff', 'Upload a different photo')}</button></div>`;
 }
 
 // Render the analysis result into the RIGHT panel: score-ring header, then the
@@ -1493,8 +1522,8 @@ function displayStandaloneAnalysis(result, imgSrc, mlResults) {
       ${recommendedProducts?.length ? routineCtaHTML(recommendedProducts) + recDetailHTML(L('tailored_recs', 'Tailored Product Recommendations'), recommendedProducts) : ''}
       ${feedbackSectionHTML(analysisId)}
       <div style="margin-top:1.2rem;display:flex;gap:.8rem;flex-wrap:wrap;">
-        <button class="btn btn-secondary" style="flex:1;min-width:130px;" onclick="retakePhoto()">📸 ${L('new_analysis', 'New Analysis')}</button>
-        <button class="btn btn-primary" style="flex:1;min-width:130px;" onclick="chatAboutAnalysis()">💬 ${L('chat_lily_btn', 'Chat with Lily')}</button>
+        <button class="btn btn-secondary" style="flex:1;min-width:130px;" onclick="retakePhoto()">${icon("scan")} ${L('new_analysis', 'New Analysis')}</button>
+        <button class="btn btn-primary" style="flex:1;min-width:130px;" onclick="chatAboutAnalysis()">${icon("chat")} ${L('chat_lily_btn', 'Chat with Lily')}</button>
       </div>
     </div>`);
   setTimeout(() => drawRadarChart(canvasId, metrics, localizeDefs(metricDefs), ml), 300);
@@ -1857,6 +1886,14 @@ window.onLangChange = function () {
 async function init() {
   if (window.i18n) window.i18n.apply();
   injectLilyAvatars();
+  injectIcons();
+  // App-first: boot straight into the Home dashboard (no marketing wall).
+  const landing = document.getElementById('landing');
+  if (landing) landing.style.display = 'none';
+  const shopView = document.getElementById('shopView');
+  if (shopView) shopView.classList.add('active');
+  showSection('home');
+  typeLilyGreeting();
   renderLangSwitch('landingLang');
   renderLangSwitch('headerLang');
   updateAuthUI();

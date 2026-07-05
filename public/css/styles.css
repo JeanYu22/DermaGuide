@@ -6,47 +6,50 @@
    ===================================================================== */
 :root {
     /* Core palette */
-    --porcelain: #FAF7EF;   /* background */
-    --pearl: #FFFDF8;       /* surface / cards */
-    --cream: #F4ECD9;       /* soft secondary surface */
+    /* ---- ONE disciplined system: ivory/white + gold (primary) + teal
+       (secondary). Every other hue is repointed into these two families so
+       the whole app reads as a single palette. ---- */
+    --porcelain: #FAF7EF;   /* app background */
+    --pearl: #FFFFFF;       /* card surface (clean white for contrast) */
+    --cream: #F5EFE2;       /* soft secondary surface */
     --soft-clay: #E7C86A;   /* light gold */
-    --coral: #B88A2A;       /* primary gold (CTA) */
-    --coral-dark: #9C7522;  /* primary gold, hover/pressed */
-    --sage: #8A9350;        /* olive (light) */
-    --sage-dark: #6F783C;   /* olive */
+    --coral: #B88A2A;       /* PRIMARY = gold */
+    --coral-dark: #9C7522;
+    --sage: #2C8C79;        /* SECONDARY = teal (was olive) */
+    --sage-dark: #177363;   /* teal */
     --clinical-blue: #E7C86A;
-    --clinical-deep: #6F783C;
-    --deep-cocoa: #141414;  /* text */
-    --cocoa-soft: #6F6A60;  /* muted text */
-    --muted: #6F6A60;
-    --line: rgba(184, 138, 42, 0.35);   /* thin gold border */
-    --shadow: 0 24px 70px rgba(120, 88, 32, 0.16);
-    --shadow-soft: 0 12px 30px rgba(120, 88, 32, 0.14);
-    --radius-xl: 32px;
-    --radius-lg: 24px;
-    --radius-md: 18px;
+    --clinical-deep: #177363;
+    --deep-cocoa: #1C1B18;  /* ink text */
+    --cocoa-soft: #6B665C;  /* muted text */
+    --muted: #8A857A;
+    --line: rgba(28, 27, 24, 0.09);      /* calm neutral hairline */
+    --line-gold: rgba(184, 138, 42, 0.28);
+    --shadow: 0 18px 50px rgba(28, 24, 16, 0.10);
+    --shadow-soft: 0 8px 22px rgba(28, 24, 16, 0.07);
+    --radius-xl: 28px;
+    --radius-lg: 22px;
+    --radius-md: 16px;
     --radius-sm: 12px;
-    --app-max: 500px;      /* app screens render as a centered phone-width canvas */
+    --app-max: 520px;
 
-    /* Chart / accent tokens (soft peach + gold radar, mint product tint) */
-    --rose-gold: #E6B98A;
+    /* Accent tokens */
+    --rose-gold: #E7C86A;   /* radar fill → gold family */
     --rose-gold-dark: #B88A2A;
-    --mint-pale: #F1EEDD;
+    --mint-pale: #EAF3F0;   /* soft teal tint */
     --gold: #B88A2A;
     --gold-dark: #9C7522;
-    /* Teal accent (Stitch): headings, active nav, checks, Lily AI avatar */
     --teal: #177363;
-    --teal-dark: #115A4E;
-    --ice-1: #E9F3F8;
-    --ice-2: #D5E8F1;
+    --teal-dark: #10574A;
+    --ice-1: #EAF3F0;
+    --ice-2: #DCEBE6;
 
-    /* Legacy aliases — kept so inline styles + untouched rules stay valid */
-    --forest: #141414;      /* → text black (headings/emphasis) */
-    --mint: #6F783C;        /* → olive */
-    --sand: #F4ECD9;        /* → cream (soft secondary surfaces) */
-    --charcoal: #141414;    /* → text */
-    --white: #FFFDF8;       /* → pearl */
-    --clay: #B8742F;        /* warm bronze (errors / accents) */
+    /* Legacy aliases */
+    --forest: #1C1B18;
+    --mint: #177363;
+    --sand: #F5EFE2;
+    --charcoal: #1C1B18;
+    --white: #FFFFFF;
+    --clay: #B26A34;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -70,7 +73,14 @@ body.dark {
     --forest: #f4e9e2; --sand: #241c17; --charcoal: #f4e9e2; --white: #1d1713; --mint: #7fa07f;
 }
 
-h1, h2, h3, h4 { font-family: 'Playfair Display', Georgia, serif; letter-spacing: -0.02em; }
+/* Type discipline: serif only for screen/section titles + hero; everything
+   else Inter (set on body). */
+h1, h2, h3 { font-family: 'Playfair Display', Georgia, serif; letter-spacing: -0.015em; color: var(--deep-cocoa); }
+h4, h5 { font-family: 'Inter', sans-serif; font-weight: 700; }
+
+/* Line icons */
+.ic { width: 1.4em; height: 1.4em; display: inline-block; vertical-align: middle; flex: 0 0 auto; }
+[data-ic] { display: inline-flex; align-items: center; justify-content: center; }
 
 .app { max-width: 100vw; min-height: 100vh; position: relative; }
 
@@ -253,8 +263,7 @@ h1, h2, h3, h4 { font-family: 'Playfair Display', Georgia, serif; letter-spacing
 }
 .lily-card-body { flex: 1; min-width: 0; }
 .lily-card-text { color: var(--deep-cocoa); font-size: .98rem; line-height: 1.55; font-weight: 600; margin: 0; }
-.lily-type { font-family: 'Courier New', ui-monospace, monospace; }
-.lily-type::after { content: '|'; color: var(--gold-dark); animation: caretBlink 1s steps(1) infinite; }
+.lily-type { font-family: inherit; }
 @keyframes caretBlink { 50% { opacity: 0; } }
 .lily-cta-row { display: flex; gap: .8rem; max-width: var(--app-max); width: calc(100% - 3rem); margin: 1rem auto 0; }
 .lily-cta-row .btn { flex: 1; }
@@ -840,4 +849,87 @@ h1, h2, h3, h4 { font-family: 'Playfair Display', Georgia, serif; letter-spacing
     .chat-messages, .chat-input-row, .chat-prompt-chips { max-width: 760px; }
 
     /* Admin already wide */
+}
+
+/* =====================================================================
+   PATH-B REBUILD — one coherent system (overrides earlier rules)
+   ===================================================================== */
+/* App sections (Home vs Shop) */
+.app-section { animation: viewIn .28s ease-out; }
+
+/* Buttons: metallic gold ONLY on the primary CTA; ghost = teal outline */
+.btn { gap: .5rem; }
+.btn .ic { width: 1.15em; height: 1.15em; }
+.btn-ghost { background: transparent; color: var(--teal); border: 1.5px solid rgba(23,115,99,.35); box-shadow: none; }
+.btn-ghost:hover { background: rgba(23,115,99,.06); }
+.btn-secondary { border-color: var(--line); }
+
+/* Header */
+.header { border-bottom: 1px solid var(--line); background: rgba(255,255,255,.9); }
+.header-icon { background: #fff; border: 1px solid var(--line); box-shadow: none; }
+.header-icon .ic { width: 1.25em; height: 1.25em; }
+.header-link { background: #fff; border: 1px solid var(--line); box-shadow: none; color: var(--deep-cocoa); }
+
+/* Section headers: serif title + optional see-all link */
+.section-header { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+.section-title { font-size: 1.35rem; font-weight: 700; margin: 0; }
+.section-title::after { content: none !important; }
+.section-link { color: var(--teal); font-weight: 700; font-size: .85rem; cursor: pointer; }
+.section-link:hover { text-decoration: underline; }
+
+/* Home hero (Lily) — one card, one primary action */
+.lily-card { align-items: center; }
+.lily-card-avatar { border-radius: 22px; box-shadow: 0 8px 20px rgba(23,115,99,.18); }
+.lily-cta-row { display: flex; gap: .6rem; margin: .9rem 0 0; max-width: none; width: auto; }
+.lily-cta-row .btn { flex: 1; padding: .7rem .9rem; min-height: 42px; font-size: .92rem; }
+
+/* Promo — calmer, single accent */
+.promo-banner { background: var(--mint-pale); border: 1px solid rgba(23,115,99,.16); }
+.promo-eyebrow { font-size: .68rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--teal); margin-bottom: .3rem; }
+.promo-copy h3 { color: var(--deep-cocoa); font-size: 1.25rem; }
+.promo-art { color: var(--teal); }
+.promo-art .ic { width: 3rem; height: 3rem; }
+
+/* Recommended strip cards: white, thin neutral border */
+.home-product-card { background: #fff; border: 1px solid var(--line); }
+.home-product-brand { color: var(--muted); }
+.home-product-price { color: var(--deep-cocoa); }
+.match-ring { border-color: var(--gold); }
+.match-ring em { background: var(--teal); }
+
+/* Product image placeholder: soft neutral, restrained emoji */
+.product-image, .home-product-img, .rec-vcard-img { background: linear-gradient(160deg, #F3EEE4, #ECE6D8); }
+.product-emoji { font-size: 2.2rem; opacity: .5; }
+.home-product-img { font-size: 1.8rem; }
+
+/* Bottom nav — SVG icons */
+.bottom-nav { background: rgba(255,255,255,.96); border-color: var(--line); }
+.nav-icon { display: inline-flex; }
+.nav-icon .ic { width: 1.5rem; height: 1.5rem; color: var(--muted); }
+.nav-item.active .nav-icon .ic { color: var(--teal); }
+.nav-item.active { color: var(--teal); }
+
+/* Shop search with leading icon */
+.shop-search-wrap { position: relative; width: 100%; }
+.shop-search-ic { position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--muted); }
+.shop-search-ic .ic { width: 1.15rem; height: 1.15rem; }
+.shop-search { padding-left: 2.7rem; }
+
+/* Filter chips: calmer */
+.filter-chip { border-color: var(--line); }
+.filter-chip.active { background: var(--teal); border-color: var(--teal); color: #fff; }
+
+/* Cert chips: gold outline / teal text (retire the loud green/blue fills) */
+.cert-badge { background: #fff !important; color: var(--teal) !important; border: 1px solid rgba(23,115,99,.3); box-shadow: none; }
+
+/* Health bars → gold, calmer */
+.health-item .bar span { background: linear-gradient(90deg, var(--soft-clay), var(--gold)); }
+.health-icon { background: var(--mint-pale); color: var(--teal); }
+.health-pct { color: var(--gold-dark); }
+
+/* Section titles that had the teal accent underline — normalize */
+.section-title.accent { color: var(--deep-cocoa); }
+
+@media (min-width: 1024px) {
+    .home-products { grid-template-columns: repeat(4, 1fr); }
 }
