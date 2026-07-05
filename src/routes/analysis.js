@@ -4,9 +4,18 @@ const express = require('express');
 const multer = require('multer');
 const Product = require('../models/Product');
 const Analysis = require('../models/Analysis');
+const Feedback = require('../models/Feedback');
 const analyzer = require('../services/agents/analyzer');
 const reviewer = require('../services/agents/reviewer');
+const recommender = require('../services/agents/recommender');
+const calibration = require('../services/calibration');
+const { profileFor } = require('../services/bodyPartProfiles');
 const { asyncHandler } = require('../middleware/errorHandler');
+
+/** Metric key→label list for a profile, for the radar chart on the client. */
+function metricDefsFor(profile) {
+  return profile.metrics.map(([key, label]) => ({ key, label }));
+}
 
 const router = express.Router();
 
@@ -21,12 +30,57 @@ function toDataUrl(file) {
   return `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
 }
 
-/** Pick catalogue products that target the analysis's top concerns. */
+/**
+ * Pick catalogue products that target the analysis's top concerns, attaching a
+ * human-readable reason explaining each recommendation.
+ */
 function recommendFor(parsed, products) {
   const concernList = parsed.topConcerns.toLowerCase().split(',').map((c) => c.trim());
-  let recs = products.filter((p) => p.concerns.some((c) => concernList.some((cc) => cc.includes(c) || c.includes(cc))));
-  if (recs.length < 3) recs = products.slice(0, 3);
-  return recs.slice(0, 3);
+  const matches = (p) => p.concerns.filter((c) => concernList.some((cc) => cc.includes(c) || c.includes(cc)));
+
+  let recs = products.filter((p) => matches(p).length > 0);
+  if (recs.length < 4) {
+    const extra = products.filter((p) => !recs.includes(p));
+    recs = [...recs, ...extra];
+  }
+
+  return recs.slice(0, 6).map((p) => {
+    const matched = matches(p);
+    const reason = matched.length
+      ? `Targets your ${matched.slice(0, 2).join(' & ')}`
+      : `A good all-round pick for ${parsed.skinType || 'your'} skin`;
+    return { ...p, reason };
+  });
+}
+
+/** Retrieve a candidate set (by concern/type) for the AI recommender to rerank. */
+function candidatesFor(a, products, n = 12) {
+  const concernList = (a.topConcerns || '').toLowerCase().split(',').map((c) => c.trim());
+  const matchesConcern = (p) => p.concerns.some((c) => concernList.some((cc) => cc.includes(c) || c.includes(cc)));
+
+  let recs = products.filter(matchesConcern);
+  if (recs.length < n) {
+    const byType = products.filter((p) => !recs.includes(p) && (p.types?.includes('all') || p.types?.includes(a.skinType)));
+    recs = [...recs, ...byType];
+  }
+  if (recs.length < n) recs = [...recs, ...products.filter((p) => !recs.includes(p))];
+  return recs.slice(0, n);
+}
+
+/**
+ * Build recommendations: retrieve candidates by concern, then let the AI
+ * recommender rerank/explain by ingredient. Falls back to keyword matching if
+ * the model is unavailable or returns nothing usable.
+ */
+async function buildRecommendations(analysisLike, products) {
+  const candidates = candidatesFor(analysisLike, products, 16);
+  try {
+    const ai = await recommender.recommend(analysisLike, candidates);
+    if (ai.length) return ai;
+  } catch (err) {
+    console.warn('recommender failed, using keyword fallback:', err.message);
+  }
+  return recommendFor(analysisLike, products);
 }
 
 /**
@@ -41,8 +95,54 @@ router.post(
     if (!req.file) return res.status(400).json({ error: 'An image file is required' });
 
     const dataUrl = toDataUrl(req.file);
-    const raw = await analyzer.analyze(dataUrl);
-    const parsed = analyzer.parse(raw);
+
+    // Gate 1: a focused subject classifier (human / animal / other) runs first,
+    // because the small grader otherwise rates animal skin as human.
+    const subject = await analyzer.classifySubject(dataUrl);
+    if (!subject.isHuman) {
+      return res.status(422).json({
+        code: 'not_human_skin',
+        error:
+          subject.verdict === 'animal'
+            ? 'This looks like an animal, not human skin. Please upload a photo of human skin (face, hand, arm, etc.).'
+            : "That photo doesn't look like human skin. Please upload a clear photo of your face, hand, arm, or other skin area.",
+      });
+    }
+
+    // Choose the body-part-specific metric profile from the classifier's locate.
+    const profile = profileFor(subject.bodyPart);
+
+    const raw = await analyzer.analyze(dataUrl, profile);
+    const parsed = analyzer.parse(raw, profile);
+
+    // Gate 2: the analyzer's own IS_HUMAN_SKIN line, as a backup.
+    if (!parsed.isSkin) {
+      return res.status(422).json({
+        code: 'not_human_skin',
+        error:
+          "That photo doesn't look like human skin. Please upload a clear photo of your face, hand, arm, or other skin area.",
+      });
+    }
+
+    // The model returned text we couldn't turn into scores. Surface a real
+    // error (with the raw output) instead of a misleading all-zero chart —
+    // this usually means the vision projector (--mmproj) isn't loaded or the
+    // model ignored the format.
+    if (parsed.isEmpty) {
+      return res.status(422).json({
+        code: 'unreadable',
+        error:
+          "The AI returned an analysis we couldn't read as scores. If this keeps happening, make sure llama.cpp was started with the multimodal projector (--mmproj) so it can see the photo.",
+        raw: raw.slice(0, 600),
+      });
+    }
+
+    // Apply the learned human-feedback calibration to the raw model scores.
+    const modelMetrics = parsed.metrics;
+    const offsets = await calibration.getOffsets();
+    const metrics = calibration.applyTo(modelMetrics, offsets);
+    const labelMap = analyzer.labelMapFromProfile(profile);
+    const topConcerns = analyzer.computeTopConcerns(metrics, labelMap) || parsed.topConcerns;
 
     // Peer review (best-effort).
     let reviewerVerdict = 'PASS';
@@ -54,12 +154,29 @@ router.post(
     }
 
     const products = (await Product.find({ active: true })).map((p) => p.toStorefront());
-    const recommended = recommendFor(parsed, products);
+    const recommended = await buildRecommendations(
+      { bodyPart: parsed.bodyPart, skinType: parsed.skinType, topConcerns, metrics },
+      products
+    );
 
     // Optional ML cross-validation summary sent from the browser TF pass.
+    // Coerce defensively — values may arrive as arrays/typed-arrays from
+    // TensorFlow and must not break the save.
     let mlValidation = {};
     try {
-      if (req.body.mlValidation) mlValidation = JSON.parse(req.body.mlValidation);
+      if (req.body.mlValidation) {
+        const v = JSON.parse(req.body.mlValidation);
+        const num = (x) => {
+          if (Array.isArray(x)) x = x[0];
+          const n = Number(x);
+          return Number.isFinite(n) ? n : 0;
+        };
+        mlValidation = {
+          validated: !!v.validated,
+          confidence: num(v.confidence),
+          faceDetected: !!v.faceDetected,
+        };
+      }
     } catch (_) {
       /* ignore malformed ML payload */
     }
@@ -67,10 +184,15 @@ router.post(
     const record = await Analysis.create({
       user: req.user?._id || null,
       bodyPart: parsed.bodyPart,
+      bodyPartCategory: profile.label,
+      isFace: profile.face,
       skinType: parsed.skinType,
-      metrics: parsed.metrics,
-      topConcerns: parsed.topConcerns,
+      metrics,
+      modelMetrics,
+      topConcerns,
       recommendation: parsed.recommendation,
+      medicalFlag: parsed.medicalFlag,
+      medicalAdvice: parsed.medicalAdvice,
       reviewerVerdict,
       mlValidation,
       recommendedProducts: recommended.map((p) => p.id),
@@ -80,15 +202,100 @@ router.post(
     if (req.user) {
       req.user.skinProfile = {
         skinType: parsed.skinType,
-        concerns: parsed.topConcerns.split(',').map((c) => c.trim()).slice(0, 3),
+        concerns: topConcerns.split(',').map((c) => c.trim()).slice(0, 3),
       };
       await req.user.save().catch(() => {});
     }
 
     res.status(201).json({
       analysisId: record._id.toString(),
-      ...parsed,
+      bodyPart: parsed.bodyPart,
+      bodyPartCategory: profile.label,
+      isFace: profile.face,
+      metricDefs: metricDefsFor(profile),
+      skinType: parsed.skinType,
+      metrics,
+      topConcerns,
+      recommendation: parsed.recommendation,
+      medicalFlag: parsed.medicalFlag,
+      medicalAdvice: parsed.medicalAdvice,
       reviewerVerdict,
+      recommendedProducts: recommended,
+    });
+  })
+);
+
+/**
+ * POST /api/analysis/:id/confirm — user confirms the analysis is accurate.
+ * Positive reinforcement signal for the calibration loop.
+ */
+router.post(
+  '/:id/confirm',
+  asyncHandler(async (req, res) => {
+    const record = await Analysis.findById(req.params.id);
+    if (record) {
+      record.userConfirmed = true;
+      await record.save().catch(() => {});
+    }
+    await calibration.recordConfirmation();
+    await Feedback.create({ analysis: record?._id || null, user: req.user?._id || null, rating: 'totally-agree' }).catch(() => {});
+    res.json({ ok: true });
+  })
+);
+
+/**
+ * POST /api/analysis/:id/correct — user provides corrected scores.
+ * This is the core human-feedback signal: we learn the model's per-metric bias
+ * (true - model) and apply it to future analyses.
+ */
+router.post(
+  '/:id/correct',
+  asyncHandler(async (req, res) => {
+    const userMetrics = req.body?.metrics || {};
+    const record = await Analysis.findById(req.params.id);
+    if (!record) return res.status(404).json({ error: 'Analysis not found' });
+
+    // Learn from the delta against the ORIGINAL model output.
+    const base = (record.modelMetrics && Object.keys(record.modelMetrics).length ? record.modelMetrics : record.metrics) || {};
+    await calibration.recordCorrection(base, userMetrics);
+
+    // Store the user's truth as the displayed metrics (over this analysis's keys).
+    const profile = profileFor(record.bodyPart);
+    const keys = profile.metrics.map(([k]) => k);
+    const existing = record.metrics || {};
+    const corrected = {};
+    for (const m of keys) {
+      const v = userMetrics[m] != null ? userMetrics[m] : existing[m];
+      corrected[m] = Math.max(0, Math.min(10, Math.round(Number(v) || 0)));
+    }
+    record.metrics = corrected;
+    record.markModified('metrics');
+    record.topConcerns = analyzer.computeTopConcerns(corrected, analyzer.labelMapFromProfile(profile)) || record.topConcerns;
+    record.revised = true;
+    await record.save();
+
+    await Feedback.create({
+      analysis: record._id,
+      user: req.user?._id || null,
+      rating: 'partially-disagree',
+      comment: 'user score correction',
+    }).catch(() => {});
+
+    const products = (await Product.find({ active: true })).map((p) => p.toStorefront());
+    const recommended = await buildRecommendations(
+      { bodyPart: record.bodyPart, skinType: record.skinType, topConcerns: record.topConcerns, metrics: corrected },
+      products
+    );
+
+    res.json({
+      analysisId: record._id.toString(),
+      bodyPart: record.bodyPart,
+      isFace: record.isFace,
+      metricDefs: metricDefsFor(profile),
+      skinType: record.skinType,
+      metrics: corrected,
+      topConcerns: record.topConcerns,
+      recommendation: record.recommendation,
       recommendedProducts: recommended,
     });
   })
@@ -109,11 +316,13 @@ router.post(
     const record = await Analysis.findById(req.params.id);
     if (!record) return res.status(404).json({ error: 'Analysis not found' });
 
+    const profile = profileFor(record.bodyPart);
     const dataUrl = toDataUrl(req.file);
-    const raw = await analyzer.reEvaluate(dataUrl, JSON.stringify(record.metrics), feedback);
-    const parsed = analyzer.parse(raw);
+    const raw = await analyzer.reEvaluate(dataUrl, profile, JSON.stringify(record.metrics), feedback);
+    const parsed = analyzer.parse(raw, profile);
 
     record.metrics = parsed.metrics;
+    record.markModified('metrics');
     record.topConcerns = parsed.topConcerns;
     record.recommendation = parsed.recommendation;
     record.skinType = parsed.skinType;
@@ -121,9 +330,12 @@ router.post(
     await record.save();
 
     const products = (await Product.find({ active: true })).map((p) => p.toStorefront());
-    const recommended = recommendFor(parsed, products);
+    const recommended = await buildRecommendations(
+      { bodyPart: record.bodyPart, skinType: record.skinType, topConcerns: parsed.topConcerns, metrics: parsed.metrics },
+      products
+    );
 
-    res.json({ analysisId: record._id.toString(), ...parsed, revised: true, recommendedProducts: recommended });
+    res.json({ analysisId: record._id.toString(), ...parsed, isFace: profile.face, metricDefs: metricDefsFor(profile), revised: true, recommendedProducts: recommended });
   })
 );
 

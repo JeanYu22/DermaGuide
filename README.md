@@ -54,6 +54,52 @@ A third, independent check runs **client-side** (`ml.js`): TensorFlow.js
 BlazeFace + LAB/Sobel pixel analysis overlays an ML "second opinion" on the
 radar chart.
 
+### Human-feedback calibration loop ("RL-style")
+
+The local Gemma grader is imperfect (it can under/over-rate metrics). Rather
+than retrain the GGUF weights (not possible locally), the system **learns its
+systematic bias from real users**:
+
+- Every analysis shows **"✓ Looks accurate"** and **"✎ Adjust scores"**.
+- "Adjust" opens sliders; the user sets the true 0-10 values.
+- The backend records `(trueValue − modelValue)` per metric and, once enough
+  samples exist, applies the learned **offset** to every future analysis
+  (`src/services/calibration.js`). Confirmations reinforce; corrections steer.
+- The admin **Calibration** tab shows each metric's sample count and applied
+  offset. Raw model scores are kept (`Analysis.modelMetrics`) so corrections
+  always measure the model's true bias.
+
+### Dropshipping suppliers
+
+Products can be sourced from external dropshipping suppliers and shown in the
+storefront as platform stock (priced at `supplierPrice × markup`, flagged
+`dropship: true`). A supplier-adapter framework normalises every source into
+the `Product` schema, inferring skincare concerns from titles and filtering out
+non-skincare items.
+
+| Supplier | Reality | Adapter |
+| --- | --- | --- |
+| **AliExpress Dropshipping** | Real API (Alibaba Open Platform DS API) | `suppliers/aliexpress.js` — signed calls; needs `ALIEXPRESS_APP_KEY/_SECRET/_ACCESS_TOKEN` |
+| **Spocket** | No public API (integrates via Shopify); use its export | `suppliers/feed.js` — CSV/JSON feed URL |
+| **BeautyJoint** | No developer API; wholesale data feed | `suppliers/feed.js` — CSV/JSON feed URL |
+
+Configure and sync from **admin → Suppliers**: set a feed URL (Spocket/
+BeautyJoint) or provide AliExpress credentials in `.env`, set the markup,
+enable, and click **Sync now**. Re-syncing refreshes price/stock/images while
+keeping manual edits. `src/services/suppliers/index.js` orchestrates the sync;
+`normalize.js` maps raw items → products.
+
+> Only AliExpress exposes a usable public dropshipping API. Spocket and
+> BeautyJoint are integrated via their product feeds/exports (CSV or JSON),
+> which is the realistic path for a custom platform.
+
+### Human-skin gate
+
+Before scoring, the analyzer agent decides `IS_HUMAN_SKIN: yes/no`. Non-skin
+images (objects, screenshots, animals, etc.) return a friendly "not human
+skin" message instead of a chart. This complements the existing client-side
+pixel pre-check (`preValidateSkinImage`).
+
 ---
 
 ## Prerequisites
@@ -91,6 +137,10 @@ cp .env.example .env        # then edit secrets / hosts as needed
 
 # 3. Seed the product catalogue + bootstrap an admin user
 npm run seed
+
+# 3b. (optional) Add a realistic EU organic-skincare demo catalogue (~27 items)
+npm run seed:demo            # add demo products
+# npm run seed:demo -- --clear   # remove them later
 
 # 4. (optional) Verify the model connection
 npm run test:llm

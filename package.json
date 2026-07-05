@@ -1,13 +1,19 @@
 {
   "name": "dermaguide",
-  "version": "1.0.0",
-  "description": "Trust-First, AI-Powered Personal Skincare Consultant and Commerce Engine (PureGlow).",
+  "version": "1.5.0",
+  "description": "DermaGuide — Trust-First, AI-Powered Personal Skincare Consultant and Commerce Engine.",
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
     "seed": "node src/db/seed.js",
-    "test:llm": "node scripts/check-llm.js"
+    "seed:demo": "node scripts/seed-demo.js",
+    "make-admin": "node scripts/make-admin.js",
+    "db:info": "node scripts/db-info.js",
+    "db:backup": "node scripts/db-backup.js",
+    "db:restore": "node scripts/db-restore.js",
+    "test:llm": "node scripts/check-llm.js",
+    "test:vision": "node scripts/check-vision.js"
   },
   "engines": {
     "node": ">=18.0.0"

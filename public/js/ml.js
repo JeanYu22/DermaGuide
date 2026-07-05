@@ -8,6 +8,14 @@ let blazefaceModel = null;
 let mlModelLoadAttempted = false;
 let mlModelLoadFailed = false;
 
+// BlazeFace returns `probability` as a 1-element array (or typed array); reduce
+// it to a plain number so it serializes cleanly and the backend can store it.
+function toScalar(v, fallback = 0.5) {
+  if (Array.isArray(v) || ArrayBuffer.isView(v)) v = v[0];
+  const n = Number(v);
+  return Number.isFinite(n) ? n : fallback;
+}
+
 async function loadMLModels() {
   if (mlModelLoadAttempted) return !mlModelLoadFailed;
   mlModelLoadAttempted = true;
@@ -49,7 +57,7 @@ async function analyzeWithMLModels(imageFile) {
               URL.revokeObjectURL(imageUrl);
               return resolve({ faceDetected: true, faceCount: predictions.length, multipleFaces: true, skipAnalysis: true });
             }
-            if (predictions.length > 0) { mlResults.confidence = predictions[0].probability || 0.5; mlResults.bodyPartDetected = 'face'; }
+            if (predictions.length > 0) { mlResults.confidence = toScalar(predictions[0].probability); mlResults.bodyPartDetected = 'face'; }
           } catch (_) { /* fall back to pixel analysis */ }
         }
 
@@ -279,32 +287,54 @@ function calculateQualityScore(concerns) {
 }
 
 // ---------------------------------------------------------------------------
-// Radar chart with optional ML cross-validation overlay
+// Radar chart with optional ML cross-validation overlay.
+//
+// metricDefs: [{ key, label }] — body-part-specific axes (variable length).
+// mlResults:  only passed for FACE analyses (ML cross-check is face-only).
 // ---------------------------------------------------------------------------
-function drawRadarChart(canvasId, metrics, skinType, mlResults = null) {
+// Map an ML pixel-concern to a face metric key (ML only covers face metrics).
+function mlValueForKey(key, c) {
+  switch (key) {
+    case 'dryness': return c.dryness || 0;
+    case 'dehydration': return (c.dryness || 0) * 0.8;
+    case 'wrinkles': return c.wrinkles || 0;
+    case 'sagging': return c.sagging || 0;
+    case 'sensitivity': return c.sensitivity || 0;
+    case 'redness': return c.redness || 0;
+    case 'blockedPores': return (c.texture || 0) * 0.9;
+    case 'enlargedPores': return (c.texture || 0) * 0.8;
+    case 'acne': return c.texture || 0;
+    case 'pigmentation': return c.pigmentation || 0;
+    default: return null; // non-face metric → no ML estimate
+  }
+}
+
+function drawRadarChart(canvasId, metrics, metricDefs, mlResults = null) {
   const canvas = document.getElementById(canvasId);
   if (!canvas) return;
+  // Back-compat: if metricDefs is a string (old skinType arg), default to face keys.
+  if (!Array.isArray(metricDefs)) {
+    metricDefs = ['dryness', 'dehydration', 'wrinkles', 'sagging', 'sensitivity', 'redness', 'blockedPores', 'enlargedPores', 'acne', 'pigmentation']
+      .map((k) => ({ key: k, label: k.replace(/([A-Z])/g, ' $1').replace(/^./, (s) => s.toUpperCase()) }));
+  }
   const ctx = canvas.getContext('2d');
-  const cx = 200, cy = 200, maxR = 150, n = 10;
+  const cx = 200, cy = 200, maxR = 150, n = metricDefs.length;
   ctx.clearRect(0, 0, 400, 400);
 
-  const labels = ['Dryness', 'Dehydration', 'Wrinkles', 'Sagging', 'Sensitivity', 'Redness', 'Blocked Pores', 'Enlarged Pores', 'Acne', 'Pigmentation'];
-  const llm = [metrics.dryness || 0, metrics.dehydration || 0, metrics.wrinkles || 0, metrics.sagging || 0, metrics.sensitivity || 0,
-    metrics.redness || 0, metrics.blockedPores || 0, metrics.enlargedPores || 0, metrics.acne || 0, metrics.pigmentation || 0];
+  const labels = metricDefs.map((d) => d.label);
+  const llm = metricDefs.map((d) => metrics[d.key] || 0);
 
   let ml = null;
   if (mlResults && mlResults.mlConcerns) {
-    const c = mlResults.mlConcerns;
-    ml = [c.dryness || 0, (c.dryness || 0) * 0.8, c.wrinkles || 0, c.sagging || 0, c.sensitivity || 0,
-      c.redness || 0, (c.texture || 0) * 0.9, (c.texture || 0) * 0.8, c.texture || 0, c.pigmentation || 0];
+    ml = metricDefs.map((d) => mlValueForKey(d.key, mlResults.mlConcerns));
   }
 
-  ctx.strokeStyle = '#E8DCC4'; ctx.lineWidth = 1;
+  const dark = document.body.classList.contains('dark');
+  ctx.strokeStyle = dark ? 'rgba(244,233,226,.14)' : 'rgba(47,37,35,.1)'; ctx.lineWidth = 1;
   for (let i = 1; i <= 5; i++) { ctx.beginPath(); ctx.arc(cx, cy, (maxR / 5) * i, 0, Math.PI * 2); ctx.stroke(); }
 
-  const dark = document.body.classList.contains('dark');
-  ctx.strokeStyle = dark ? '#555' : '#D4D4D4';
-  ctx.fillStyle = dark ? '#E8DCC4' : '#2D3142';
+  ctx.strokeStyle = dark ? 'rgba(244,233,226,.16)' : 'rgba(47,37,35,.14)';
+  ctx.fillStyle = dark ? '#cbb6ac' : '#62504b';
   ctx.font = '11px Inter';
   for (let i = 0; i < n; i++) {
     const ang = (Math.PI * 2 / n) * i - Math.PI / 2;
@@ -314,7 +344,7 @@ function drawRadarChart(canvasId, metrics, skinType, mlResults = null) {
   }
 
   if (ml) {
-    ctx.beginPath(); ctx.fillStyle = 'rgba(144,238,144,0.15)'; ctx.strokeStyle = '#90EE90'; ctx.lineWidth = 2; ctx.setLineDash([5, 5]);
+    ctx.beginPath(); ctx.fillStyle = 'rgba(139,155,94,0.16)'; ctx.strokeStyle = '#6c7a42'; ctx.lineWidth = 2; ctx.setLineDash([5, 5]);
     for (let i = 0; i < n; i++) {
       const ang = (Math.PI * 2 / n) * i - Math.PI / 2; const rad = maxR * (ml[i] / 10);
       const x = cx + Math.cos(ang) * rad, y = cy + Math.sin(ang) * rad;
@@ -323,7 +353,7 @@ function drawRadarChart(canvasId, metrics, skinType, mlResults = null) {
     ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.setLineDash([]);
   }
 
-  ctx.beginPath(); ctx.fillStyle = 'rgba(124,148,115,0.3)'; ctx.strokeStyle = '#7C9473'; ctx.lineWidth = 2.5;
+  ctx.beginPath(); ctx.fillStyle = 'rgba(230,185,138,0.38)'; ctx.strokeStyle = '#B88A2A'; ctx.lineWidth = 2.5;
   for (let i = 0; i < n; i++) {
     const ang = (Math.PI * 2 / n) * i - Math.PI / 2; const rad = maxR * (llm[i] / 10);
     const x = cx + Math.cos(ang) * rad, y = cy + Math.sin(ang) * rad;
@@ -331,18 +361,33 @@ function drawRadarChart(canvasId, metrics, skinType, mlResults = null) {
   }
   ctx.closePath(); ctx.fill(); ctx.stroke();
 
-  ctx.fillStyle = '#5F6F52';
+  ctx.fillStyle = '#B88A2A';
   for (let i = 0; i < n; i++) {
     const ang = (Math.PI * 2 / n) * i - Math.PI / 2; const rad = maxR * (llm[i] / 10);
     ctx.beginPath(); ctx.arc(cx + Math.cos(ang) * rad, cy + Math.sin(ang) * rad, 4, 0, Math.PI * 2); ctx.fill();
   }
 
+  // Overall score inside the radar center (matches the reference layout).
+  if (typeof window !== 'undefined' && typeof window.overallScore === 'function') {
+    const score = window.overallScore(metrics);
+    if (score != null) {
+      ctx.beginPath(); ctx.arc(cx, cy, 34, 0, Math.PI * 2);
+      ctx.fillStyle = dark ? 'rgba(29,23,19,.92)' : 'rgba(255,253,248,.94)';
+      ctx.fill(); ctx.lineWidth = 1.5; ctx.strokeStyle = '#B88A2A'; ctx.stroke();
+      ctx.fillStyle = dark ? '#f4e9e2' : '#141414';
+      ctx.font = '700 20px Georgia, serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(String(score), cx, cy - 4);
+      ctx.font = '700 9px Inter'; ctx.fillStyle = dark ? '#cbb6ac' : '#6F6A60';
+      ctx.fillText('OVERALL', cx, cy + 13);
+    }
+  }
+
   if (ml) {
     const ly = 392; ctx.font = '10px Inter';
-    const tc = dark ? '#E8DCC4' : '#2D3142';
-    ctx.fillStyle = '#7C9473'; ctx.fillRect(70, ly, 20, 3);
+    const tc = dark ? '#cbb6ac' : '#6F6A60';
+    ctx.fillStyle = '#B88A2A'; ctx.fillRect(70, ly, 20, 3);
     ctx.fillStyle = tc; ctx.textAlign = 'left'; ctx.fillText('LLM Analysis', 95, ly + 3);
-    ctx.strokeStyle = '#90EE90'; ctx.lineWidth = 2; ctx.setLineDash([3, 3]);
+    ctx.strokeStyle = '#6F783C'; ctx.lineWidth = 2; ctx.setLineDash([3, 3]);
     ctx.beginPath(); ctx.moveTo(200, ly + 1.5); ctx.lineTo(220, ly + 1.5); ctx.stroke(); ctx.setLineDash([]);
     ctx.fillStyle = tc; ctx.fillText('ML Cross-Validation', 225, ly + 3);
   }

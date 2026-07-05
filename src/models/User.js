@@ -15,6 +15,17 @@ const UserSchema = new Schema(
       skinType: { type: String, default: '' },
       concerns: { type: [String], default: [] },
     },
+
+    // Explicit preferences the user edits in their profile — one input to the
+    // recommender for users who haven't run a skin analysis.
+    preferences: {
+      skinType: { type: String, default: '' },
+      concerns: { type: [String], default: [] },
+      categories: { type: [String], default: [] }, // product types they like
+    },
+
+    // Implicit signal: recently viewed product ids (newest first, capped).
+    recentViews: { type: [String], default: [] },
   },
   { timestamps: true }
 );
@@ -34,6 +45,7 @@ UserSchema.methods.toSafeJSON = function toSafeJSON() {
     name: this.name,
     role: this.role,
     skinProfile: this.skinProfile,
+    preferences: this.preferences,
   };
 };
 
