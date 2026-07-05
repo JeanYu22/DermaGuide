@@ -58,7 +58,16 @@ function buildPrompt(profile) {
     .join('\n');
   return `You are a careful dermatology vision assistant examining a photo of a person's ${profile.label.toLowerCase()}.
 
-Look closely and score ONLY what is actually visible (0 = none, 3 = mild, 6 = moderate, 9 = severe). Use this guidance for each metric:
+Score each metric on the FULL 0-10 scale. Calibration anchors — match the score to what you see:
+- 0-1 = not present at all
+- 2-3 = barely visible / trace
+- 4-5 = clearly visible but mild-moderate
+- 6-7 = obvious, affects a noticeable area
+- 8-10 = severe / widespread
+
+IMPORTANT: Do NOT cluster your scores in the 0-4 range. If a concern is clearly visible in the photo, it must score AT LEAST 5. Reserve 0-2 only for concerns you truly cannot see. A typical real photo should have at least one or two metrics of 5 or higher — look again before returning all-low scores.
+
+Use this guidance for each metric:
 ${hints}
 
 Do NOT under-rate clearly visible problems (especially redness, rashes and irritation), and do not invent issues on healthy-looking skin.

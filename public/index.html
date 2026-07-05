@@ -32,13 +32,13 @@
                         <span data-i18n="trust_secure">✓ Secure checkout</span>
                     </div>
                 </div>
-                <!-- Illustrated AI nurse "Lily" portrait -->
+                <!-- Lily — AI consultant android -->
                 <div class="nurse">
                     <div class="nurse-orbit" aria-hidden="true"></div>
-                    <div class="nurse-figure"><img src="/img/lily-portrait.png" alt="Lily, your AI skincare nurse"></div>
+                    <div class="nurse-android" data-lily></div>
                     <div class="nurse-bubble">
                         <div class="nurse-bubble-title" data-i18n="meet_lily">Hi, I'm Lily 👋</div>
-                        <div class="nurse-bubble-text" data-i18n="lily_intro">Your AI skincare nurse.</div>
+                        <div class="nurse-bubble-text" data-i18n="lily_intro">Your AI skincare consultant.</div>
                     </div>
                 </div>
             </section>
@@ -124,11 +124,11 @@
         <div class="tips-grid" id="tipsGrid"></div>
 
         <div class="bottom-nav">
-            <div class="nav-item active" onclick="setNavActive(this); scrollToHome()"><div class="nav-icon">🏠</div><div class="nav-label" data-i18n="nav_home">Home</div></div>
-            <div class="nav-item" onclick="setNavActive(this); openAnalyzer()"><div class="nav-icon">📸</div><div class="nav-label" data-i18n="nav_analyze">Analysis</div></div>
-            <div class="nav-item" onclick="setNavActive(this); scrollToProducts()"><div class="nav-icon">🛍️</div><div class="nav-label" data-i18n="nav_shop">Shop</div></div>
-            <div class="nav-item" onclick="setNavActive(this); openChat()"><div class="nav-icon">💬</div><div class="nav-label" data-i18n="nav_chat">Chat</div></div>
-            <div class="nav-item" onclick="setNavActive(this); openProfile()"><div class="nav-icon">👤</div><div class="nav-label" data-i18n="nav_profile">Profile</div></div>
+            <div class="nav-item active" data-nav="home" onclick="syncNav('home'); scrollToHome()"><div class="nav-icon">🏠</div><div class="nav-label" data-i18n="nav_home">Home</div></div>
+            <div class="nav-item" data-nav="analyze" onclick="openAnalyzer()"><div class="nav-icon">📸</div><div class="nav-label" data-i18n="nav_analyze">Analysis</div></div>
+            <div class="nav-item" data-nav="shop" onclick="syncNav('shop'); scrollToProducts()"><div class="nav-icon">🛍️</div><div class="nav-label" data-i18n="nav_shop">Shop</div></div>
+            <div class="nav-item" data-nav="chat" onclick="openChat()"><div class="nav-icon">💬</div><div class="nav-label" data-i18n="nav_chat">Chat</div></div>
+            <div class="nav-item" data-nav="profile" onclick="syncNav('profile'); openProfile()"><div class="nav-icon">👤</div><div class="nav-label" data-i18n="nav_profile">Profile</div></div>
         </div>
 
         <div class="ai-assistant" id="aiAssistant">
@@ -181,7 +181,8 @@
     <div class="analyzer-modal" id="analyzerModal">
         <div class="chat-header">
             <button class="back-btn" onclick="closeAnalyzer()">←</button>
-            <div class="chat-title" data-i18n="analyzer_title">AI Skin Analysis</div>
+            <div class="chat-title" data-i18n="analyzer_title">Innovative Clinical Analysis</div>
+            <button class="back-btn" onclick="openProfile()" title="Profile" aria-label="Profile">👤</button>
         </div>
         <div class="analyzer-content" id="analyzerContent">
             <div class="upload-zone" id="uploadZone">

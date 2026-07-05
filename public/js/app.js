@@ -73,30 +73,55 @@ const tips = [
 // ===========================================================================
 // Lily — animated illustrated care agent + clinical scan visuals
 // ===========================================================================
-// Lily — the teal AI-consultant avatar (per the Stitch design): a friendly
-// robot face on a teal gradient disc. One constant feeds every avatar slot.
+// Lily — an elegant feminine android (white/silver head, teal-glow eyes,
+// segmented neck), approximating the reference render as a clean vector.
+// One constant feeds every avatar slot.
 const LILY_IMG = `
 <svg class="lily-ai" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" aria-label="Lily, your AI skincare consultant">
   <defs>
-    <radialGradient id="lilyBg" cx="38%" cy="30%" r="80%">
-      <stop offset="0%" stop-color="#BFE8DF"/><stop offset="55%" stop-color="#5FB3A1"/><stop offset="100%" stop-color="#177363"/>
+    <radialGradient id="laBg" cx="34%" cy="24%" r="90%">
+      <stop offset="0%" stop-color="#F4FAF8"/><stop offset="48%" stop-color="#BFDCD6"/><stop offset="100%" stop-color="#7FA9A2"/>
     </radialGradient>
+    <linearGradient id="laHead" x1="20%" y1="8%" x2="80%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/><stop offset="55%" stop-color="#F2F3F4"/><stop offset="100%" stop-color="#CDD4D6"/>
+    </linearGradient>
+    <linearGradient id="laFace" x1="30%" y1="0%" x2="70%" y2="100%">
+      <stop offset="0%" stop-color="#FDFEFE"/><stop offset="100%" stop-color="#E2E7E8"/>
+    </linearGradient>
+    <linearGradient id="laEye" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#9FF0E2"/><stop offset="55%" stop-color="#2FB9A0"/><stop offset="100%" stop-color="#0E6B5B"/>
+    </linearGradient>
   </defs>
-  <circle cx="60" cy="60" r="60" fill="url(#lilyBg)"/>
-  <circle cx="60" cy="60" r="60" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="2"/>
-  <line x1="60" y1="18" x2="60" y2="28" stroke="#FFFDF8" stroke-width="3.4" stroke-linecap="round"/>
-  <circle cx="60" cy="14.5" r="4.2" fill="#E7C86A"/>
-  <rect x="20" y="52" width="8" height="20" rx="4" fill="#FFFDF8" opacity=".92"/>
-  <rect x="92" y="52" width="8" height="20" rx="4" fill="#FFFDF8" opacity=".92"/>
-  <rect x="28" y="32" width="64" height="58" rx="26" fill="#FFFDF8"/>
-  <rect x="36" y="44" width="48" height="34" rx="17" fill="#E9F5F2"/>
+  <circle cx="60" cy="60" r="60" fill="url(#laBg)"/>
+  <circle cx="60" cy="60" r="59" fill="none" stroke="rgba(255,255,255,.5)" stroke-width="1.6"/>
+  <!-- segmented neck -->
+  <path d="M49 92 h22 v20 h-22 z" fill="#D7DDDF"/>
+  <path d="M49 96 h22 M49 101 h22 M49 106 h22" stroke="#AEB8BB" stroke-width="1.6"/>
+  <!-- head: smooth crown, tapered jaw -->
+  <path d="M60 14 C40 14 31 28 31 46 C31 62 35 74 42 82 C48 89 53 93 60 93 C67 93 72 89 78 82 C85 74 89 62 89 46 C89 28 80 14 60 14 Z" fill="url(#laHead)"/>
+  <!-- crown seam + brow plate -->
+  <path d="M34 40 Q60 30 86 40" fill="none" stroke="#C2CBCD" stroke-width="1.4" opacity=".9"/>
+  <!-- face plate -->
+  <path d="M60 34 C46 34 40 42 40 53 C40 66 45 77 51 82 C55 85 57 87 60 87 C63 87 65 85 69 82 C75 77 80 66 80 53 C80 42 74 34 60 34 Z" fill="url(#laFace)"/>
+  <!-- teal ear pods -->
+  <ellipse cx="33" cy="58" rx="4.2" ry="8" fill="#2FB9A0" opacity=".85"/>
+  <ellipse cx="87" cy="58" rx="4.2" ry="8" fill="#2FB9A0" opacity=".85"/>
+  <!-- glowing almond eyes -->
   <g class="lily-eyes">
-    <rect x="45" y="52" width="7.5" height="15" rx="3.75" fill="#177363"/>
-    <rect x="67.5" y="52" width="7.5" height="15" rx="3.75" fill="#177363"/>
+    <path d="M43 55 Q50.5 48.5 58 55 Q50.5 61.5 43 55 Z" fill="url(#laEye)"/>
+    <path d="M62 55 Q69.5 48.5 77 55 Q69.5 61.5 62 55 Z" fill="url(#laEye)"/>
+    <circle cx="52.5" cy="53.6" r="1.4" fill="#EAFFF9"/><circle cx="71.5" cy="53.6" r="1.4" fill="#EAFFF9"/>
   </g>
-  <path d="M52 82 Q60 88 68 82" stroke="#177363" stroke-width="3" fill="none" stroke-linecap="round"/>
-  <circle cx="39" cy="70" r="3" fill="#B7E0D8"/><circle cx="81" cy="70" r="3" fill="#B7E0D8"/>
-  <path d="M92 26 L94.5 32 L100.5 34.5 L94.5 37 L92 43 L89.5 37 L83.5 34.5 L89.5 32 Z" fill="#E7C86A"/>
+  <!-- brow lines -->
+  <path d="M43 46.5 Q50.5 43.5 58 46.5" stroke="#8FA0A4" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <path d="M62 46.5 Q69.5 43.5 77 46.5" stroke="#8FA0A4" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <!-- nose + soft lips -->
+  <path d="M60 60 L58.4 68 Q60 69.2 61.6 68 Z" fill="#C4CDD0"/>
+  <path d="M52 75.5 Q60 80.5 68 75.5 Q60 78.8 52 75.5 Z" fill="#8FA0A4"/>
+  <!-- cheek glow -->
+  <circle cx="46" cy="65" r="2.6" fill="#9FE7DA" opacity=".5"/><circle cx="74" cy="65" r="2.6" fill="#9FE7DA" opacity=".5"/>
+  <!-- gold sparkle -->
+  <path d="M94 24 L96.4 30 L102.4 32.4 L96.4 34.8 L94 40.8 L91.6 34.8 L85.6 32.4 L91.6 30 Z" fill="#E7C86A"/>
 </svg>`;
 
 // Inject the Lily face into every [data-lily] slot on the page.
@@ -180,9 +205,9 @@ function dismissAssistant() {
   setTimeout(() => { a.classList.remove('active'); a.style.animation = ''; }, 500);
 }
 function openChatFromAssistant() { dismissAssistant(); setTimeout(openChat, 300); }
-function openChat() { document.getElementById('chatModal').classList.add('active'); }
-function closeChat() { document.getElementById('chatModal').classList.remove('active'); }
-function openAnalyzer() { document.getElementById('analyzerModal').classList.add('active'); renderAnalyzerHome(); }
+function openChat() { document.getElementById('chatModal').classList.add('active'); syncNav('chat'); }
+function closeChat() { document.getElementById('chatModal').classList.remove('active'); syncNav('home'); }
+function openAnalyzer() { document.getElementById('analyzerModal').classList.add('active'); renderAnalyzerHome(); syncNav('analyze'); }
 
 // Two-panel analyzer scaffold: upload/preview on the left, results on the right.
 function renderAnalyzerHome() {
@@ -238,7 +263,7 @@ function scanFrameHTML() {
   </div>`;
 }
 function setAnalyzerRight(html) { const r = document.getElementById('analyzeRight'); if (r) r.innerHTML = html; }
-function closeAnalyzer() { document.getElementById('analyzerModal').classList.remove('active'); }
+function closeAnalyzer() { document.getElementById('analyzerModal').classList.remove('active'); syncNav('home'); }
 function scrollToProducts() { document.getElementById('productsSection').scrollIntoView({ behavior: 'smooth' }); }
 function scrollToTips() { document.getElementById('tipsSection').scrollIntoView({ behavior: 'smooth' }); }
 function scrollToHome() { const c = document.getElementById('lilyCard'); if (c) c.scrollIntoView({ behavior: 'smooth' }); }
@@ -246,6 +271,10 @@ function openProfile() { openAuth(); }
 function setNavActive(el) {
   document.querySelectorAll('.bottom-nav .nav-item').forEach((n) => n.classList.remove('active'));
   if (el) el.classList.add('active');
+}
+// Keep the tab bar in sync no matter HOW a view was opened (nav, CTA, coach…).
+function syncNav(name) {
+  document.querySelectorAll('.bottom-nav .nav-item').forEach((n) => n.classList.toggle('active', n.dataset.nav === name));
 }
 
 // Typewriter effect on Lily's home greeting (Stitch hero card).
@@ -342,12 +371,11 @@ function renderProducts() {
       card.className = 'product-card';
       card.onclick = () => showProductModal(p);
       card.innerHTML = `
-        <div class="product-image">${productImageInner(p)}
-          <div class="cert-badges">${p.certs.map((c) => `<span class="cert-badge ${c}">${c.toUpperCase()}</span>`).join('')}</div>
-        </div>
+        <div class="product-image">${productImageInner(p)}</div>
         <div class="product-info">
           <div class="product-name">${p.name}</div>
           ${p.brand ? `<div class="product-brand">${p.brand}</div>` : ''}
+          ${p.certs && p.certs.length ? `<div class="cert-row">${p.certs.map((c) => `<span class="cert-badge ${c}">${c.toUpperCase()}</span>`).join('')}</div>` : ''}
           <div class="product-buy">
             <span class="product-price">$${p.price.toFixed(2)}${p.inStock ? '' : '<span class="out-of-stock">Out of stock</span>'}</span>
             ${p.inStock ? `<button class="add-btn" onclick="event.stopPropagation(); addToCart('${p.id}', this)">${L('add', 'Add')}</button>` : ''}
@@ -377,7 +405,9 @@ function renderHomeProducts() {
   let cached = null;
   try { cached = JSON.parse(localStorage.getItem('dg_last_health') || 'null'); } catch (e) { /* ignore */ }
   const recs = cached && cached.recs && cached.recs.length ? cached.recs : null;
-  const picks = recs || State.products.slice(0, 4);
+  // Chain: analysis recs (match badges) → implicit RS (prefs/orders/views) → top picks.
+  const implicit = !recs && State.implicitRecs && State.implicitRecs.source === 'implicit' ? State.implicitRecs.products.slice(0, 6) : null;
+  const picks = recs || implicit || State.products.slice(0, 4);
   el.innerHTML = picks.length ? picks.map((p, i) => `
     <div class="home-product-card" onclick='showProductModal(${JSON.stringify(p).replace(/'/g, "&#39;")})'>
       <div class="home-product-img">${productImageInner(p)}</div>
@@ -385,7 +415,8 @@ function renderHomeProducts() {
       <div class="home-product-name">${p.name}</div>
       <div class="home-product-buy">
         <span class="home-product-price">$${Number(p.price).toFixed(2)}</span>
-        ${recs ? `<span class="match-ring" title="${L('match_score', 'Match Score')}"><b>${matchScoreFor(i)}%</b><small>${L('match', 'Match')}</small><em>✓</em></span>` : ''}
+        ${recs ? `<span class="match-ring" title="${L('match_score', 'Match Score')}"><b>${matchScoreFor(i)}%</b><small>${L('match', 'Match')}</small><em>✓</em></span>`
+          : (implicit ? `<span class="foryou-chip">✨ ${L('for_you', 'For you')}</span>` : '')}
       </div>
       <button class="btn btn-dark btn-small btn-full" onclick="event.stopPropagation(); addToCart('${p.id}', this)">${L('add_cart', 'Add to Cart')}</button>
     </div>`).join('') : `<div class="empty-grid" style="padding:1.2rem;">${L('loading_products', 'Loading products…')}</div>`;
@@ -457,6 +488,8 @@ function renderTips() {
 function findProduct(id) { return State.products.find((p) => p.id === id); }
 
 function showProductModal(product) {
+  // Implicit RS signal: log the view (fire-and-forget, signed-in only server-side).
+  if (product.id) api(`/products/${product.id}/view`, { method: 'POST' }).catch(() => {});
   const modal = document.createElement('div');
   modal.className = 'modal';
   modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
@@ -569,11 +602,69 @@ function openAccount() {
       <div class="modal-body">
         <p style="margin-bottom:1rem;"><strong>${State.user.name || ''}</strong><br><span style="opacity:.7;">${State.user.email}</span></p>
         <button class="btn btn-primary btn-full" style="margin-bottom:.8rem;" onclick="this.closest('.modal').remove(); showOrders();">📦 My Orders</button>
+        <button class="btn btn-primary btn-full" style="margin-bottom:.8rem;" onclick="this.closest('.modal').remove(); showPreferences();">💛 My Skin Preferences</button>
         ${isAdmin ? '<button class="btn btn-primary btn-full" style="margin-bottom:.8rem;background:var(--clay);" onclick="this.closest(\'.modal\').remove(); openAdmin();">🛠️ Admin Dashboard</button>' : ''}
         <button class="btn btn-full" style="background:var(--sand);" onclick="this.closest('.modal').remove(); clearAuth(); toast('Signed out');">Sign Out</button>
       </div>
     </div>`;
   document.body.appendChild(modal);
+}
+
+// Preference editor — explicit inputs for the implicit recommender.
+const PREF_CONCERNS = ['acne', 'dryness', 'redness', 'pigmentation', 'wrinkles', 'large pores', 'sensitivity', 'oily'];
+const PREF_CATEGORIES = ['cleanser', 'serum', 'moisturizer', 'sunscreen', 'mask', 'toner', 'oil', 'exfoliant'];
+function showPreferences() {
+  const prefs = State.user?.preferences || {};
+  const modal = document.createElement('div');
+  modal.className = 'modal';
+  modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+  const chip = (name, val, list) => `<label class="pref-chip"><input type="checkbox" name="${name}" value="${val}" ${(list || []).includes(val) ? 'checked' : ''}><span>${val}</span></label>`;
+  modal.innerHTML = `
+    <div class="modal-content">
+      <div class="modal-header"><div class="modal-handle"></div><h2 class="modal-title">My Skin Preferences</h2></div>
+      <div class="modal-body">
+        <p style="font-size:.85rem;color:var(--muted);margin-bottom:1rem;">Used to personalise "Recommended for You" until you run a skin analysis.</p>
+        <div class="form-group"><label class="form-label">Skin type</label>
+          <select class="form-input" id="prefSkinType">
+            <option value="">— select —</option>
+            ${['dry', 'normal', 'oily', 'combination'].map((s) => `<option value="${s}" ${prefs.skinType === s ? 'selected' : ''}>${s}</option>`).join('')}
+          </select></div>
+        <div class="form-group"><label class="form-label">Main concerns</label>
+          <div class="pref-chips" id="prefConcerns">${PREF_CONCERNS.map((c) => chip('c', c, prefs.concerns)).join('')}</div></div>
+        <div class="form-group"><label class="form-label">Favourite product types</label>
+          <div class="pref-chips" id="prefCats">${PREF_CATEGORIES.map((c) => chip('t', c, prefs.categories)).join('')}</div></div>
+        <button class="btn btn-primary btn-full" onclick="savePreferences(this)">Save preferences</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+}
+async function savePreferences(btn) {
+  const modal = btn.closest('.modal');
+  const picked = (sel) => [...modal.querySelectorAll(`${sel} input:checked`)].map((i) => i.value);
+  btn.disabled = true;
+  try {
+    const { user } = await api('/auth/me', {
+      method: 'PATCH',
+      body: { preferences: { skinType: modal.querySelector('#prefSkinType').value, concerns: picked('#prefConcerns'), categories: picked('#prefCats') } },
+    });
+    State.user = user;
+    localStorage.setItem('pg_user', JSON.stringify(user));
+    modal.remove();
+    toast('Preferences saved 💛');
+    loadImplicitRecs();
+  } catch (err) { toast(err.message); btn.disabled = false; }
+}
+
+// Implicit recommendations (no analysis yet): fetch once, feed the home strip.
+async function loadImplicitRecs() {
+  try {
+    let cached = null;
+    try { cached = JSON.parse(localStorage.getItem('dg_last_health') || 'null'); } catch (e) { /* ignore */ }
+    if (cached && cached.recs && cached.recs.length) return; // analysis recs win
+    const { products, source } = await api('/products/recommendations/for-me?limit=6');
+    State.implicitRecs = { products, source };
+    renderHomeProducts();
+  } catch (e) { /* endpoint optional */ }
 }
 
 async function showOrders() {
@@ -1781,9 +1872,14 @@ async function init() {
 
   document.getElementById('chatInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
 
-  // Validate stored session.
+  // Validate stored session, then fetch implicit recommendations.
   if (State.token) {
-    api('/auth/me').then(({ user }) => { State.user = user; localStorage.setItem('pg_user', JSON.stringify(user)); updateAuthUI(); }).catch(clearAuth);
+    api('/auth/me').then(({ user }) => {
+      State.user = user;
+      localStorage.setItem('pg_user', JSON.stringify(user));
+      updateAuthUI();
+      loadImplicitRecs();
+    }).catch(clearAuth);
   }
 
   // Assistant bubble auto-hide + scroll behaviour.

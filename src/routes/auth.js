@@ -49,4 +49,25 @@ router.get(
   })
 );
 
+// Update profile info + preferences (feeds the recommender for users
+// who haven't run a skin analysis).
+router.patch(
+  '/me',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const { name, preferences } = req.body || {};
+    if (typeof name === 'string') req.user.name = name.trim().slice(0, 80);
+    if (preferences && typeof preferences === 'object') {
+      const clean = (arr) => (Array.isArray(arr) ? arr.map((s) => String(s).trim().toLowerCase()).filter(Boolean).slice(0, 12) : undefined);
+      if (typeof preferences.skinType === 'string') req.user.preferences.skinType = preferences.skinType.trim().toLowerCase().slice(0, 20);
+      const concerns = clean(preferences.concerns);
+      if (concerns) req.user.preferences.concerns = concerns;
+      const categories = clean(preferences.categories);
+      if (categories) req.user.preferences.categories = categories;
+    }
+    await req.user.save();
+    res.json({ user: req.user.toSafeJSON() });
+  })
+);
+
 module.exports = router;
